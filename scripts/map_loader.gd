@@ -10,8 +10,12 @@ var tile_size := 32
 var map_data: Dictionary = {}
 var tileset_catalogue: Dictionary = {}
 var walkability_grid: Array = []
+var validation_warnings: Array[String] = []
+var is_loaded := false
 
 @onready var tiles_root := Node2D.new()
+
+signal map_loaded
 
 
 func _ready() -> void:
@@ -22,6 +26,8 @@ func _ready() -> void:
 
 func load_map() -> void:
 	_clear_tiles()
+	is_loaded = false
+	validation_warnings.clear()
 	tileset_catalogue = _load_json_dictionary(tileset_catalogue_path)
 	map_data = _load_json_dictionary(map_path)
 	if tileset_catalogue.is_empty() or map_data.is_empty():
@@ -30,6 +36,7 @@ func load_map() -> void:
 	var errors := MapValidator.validate_catalogue(tileset_catalogue)
 	errors.append_array(MapValidator.validate_map(map_data, tileset_catalogue))
 	if not errors.is_empty():
+		validation_warnings.assign(errors)
 		for error in errors:
 			push_error(error)
 		return
@@ -37,6 +44,8 @@ func load_map() -> void:
 	tile_size = int(tileset_catalogue["tile_size"])
 	_build_walkability_grid()
 	_render_fallback_map()
+	is_loaded = true
+	map_loaded.emit()
 
 
 func is_tile_walkable(tile_pos: Vector2i) -> bool:
@@ -57,8 +66,23 @@ func tile_to_world(tile_pos: Vector2i) -> Vector2:
 
 
 func get_player_spawn_world() -> Vector2:
-	var spawn := Vector2i(int(map_data["player_spawn"][0]), int(map_data["player_spawn"][1]))
-	return tile_to_world(spawn)
+	return tile_to_world(get_player_spawn_tile())
+
+
+func get_player_spawn_tile() -> Vector2i:
+	return Vector2i(int(map_data["player_spawn"][0]), int(map_data["player_spawn"][1]))
+
+
+func get_map_size() -> Vector2i:
+	return Vector2i(int(map_data.get("width", 0)), int(map_data.get("height", 0)))
+
+
+func get_tile_size() -> int:
+	return tile_size
+
+
+func get_validation_warnings() -> Array[String]:
+	return validation_warnings.duplicate()
 
 
 func _load_json_dictionary(path: String) -> Dictionary:
