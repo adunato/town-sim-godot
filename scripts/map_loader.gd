@@ -1,6 +1,8 @@
 extends Node2D
 class_name MapLoader
 
+const MapValidator = preload("res://scripts/map_validator.gd")
+
 @export_file("*.json") var tileset_catalogue_path := "res://data/tileset_catalogue.json"
 @export_file("*.json") var map_path := "res://data/map_001.json"
 

@@ -127,7 +127,7 @@ static func _validate_walkable_path(tiles: Array, catalogue_tiles: Dictionary, p
 			continue
 		visited[current] = true
 		for direction in [Vector2i.RIGHT, Vector2i.LEFT, Vector2i.DOWN, Vector2i.UP]:
-			var next := current + direction
+			var next: Vector2i = current + direction
 			if walkable_tiles.has(next) and not visited.has(next):
 				pending.append(next)
 
