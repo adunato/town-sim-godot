@@ -1,0 +1,13 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/map_loader.gd" id="1_map_loader"]
+
+[node name="Main" type="Node2D"]
+
+[node name="MapLoader" type="Node2D" parent="."]
+script = ExtResource("1_map_loader")
+
+[node name="Camera2D" type="Camera2D" parent="."]
+position = Vector2(256, 160)
+zoom = Vector2(1.5, 1.5)
+enabled = true

@@ -1,0 +1,36 @@
+{
+  "tile_size": 32,
+  "tileset_image": "res://assets/tilesets/town_tiles.png",
+  "tiles": {
+    "grass": {
+      "atlas": [0, 0],
+      "walkable": false,
+      "fallback_color": "#5BA15B"
+    },
+    "road_straight": {
+      "atlas": [1, 0],
+      "walkable": true,
+      "fallback_color": "#77716A"
+    },
+    "road_corner": {
+      "atlas": [2, 0],
+      "walkable": true,
+      "fallback_color": "#827A72"
+    },
+    "road_crossing": {
+      "atlas": [3, 0],
+      "walkable": true,
+      "fallback_color": "#8E867D"
+    },
+    "house_wall": {
+      "atlas": [4, 0],
+      "walkable": false,
+      "fallback_color": "#9B6B54"
+    },
+    "tree": {
+      "atlas": [5, 0],
+      "walkable": false,
+      "fallback_color": "#2F6B3F"
+    }
+  }
+}

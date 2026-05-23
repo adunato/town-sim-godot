@@ -1,0 +1,17 @@
+{
+  "width": 16,
+  "height": 10,
+  "tiles": [
+    ["grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass"],
+    ["grass", "tree", "grass", "grass", "grass", "grass", "road_straight", "grass", "grass", "grass", "grass", "grass", "house_wall", "house_wall", "grass", "grass"],
+    ["grass", "grass", "grass", "house_wall", "grass", "grass", "road_straight", "grass", "grass", "tree", "grass", "grass", "house_wall", "house_wall", "grass", "grass"],
+    ["grass", "grass", "grass", "house_wall", "grass", "grass", "road_straight", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass"],
+    ["grass", "grass", "grass", "grass", "grass", "grass", "road_crossing", "road_straight", "road_straight", "road_straight", "road_corner", "grass", "grass", "grass", "tree", "grass"],
+    ["grass", "tree", "grass", "grass", "grass", "grass", "road_straight", "grass", "grass", "grass", "road_straight", "grass", "grass", "grass", "grass", "grass"],
+    ["grass", "grass", "grass", "road_straight", "road_straight", "road_straight", "road_crossing", "road_straight", "road_straight", "road_straight", "road_crossing", "road_straight", "road_straight", "grass", "grass", "grass"],
+    ["grass", "grass", "grass", "road_straight", "grass", "grass", "road_straight", "grass", "grass", "grass", "road_straight", "grass", "road_straight", "grass", "grass", "grass"],
+    ["grass", "grass", "grass", "road_straight", "grass", "grass", "road_straight", "grass", "tree", "grass", "road_straight", "grass", "road_straight", "grass", "grass", "grass"],
+    ["grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass"]
+  ],
+  "player_spawn": [6, 6]
+}
