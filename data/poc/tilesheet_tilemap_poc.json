@@ -1,0 +1,34 @@
+{
+  "atlas": {
+    "path": "res://assets/poc/terrain_tilesheet_poc.png",
+    "size": [128, 64],
+    "tile_size": [16, 16],
+    "rect_origin": "top_left",
+    "generate_placeholder": true
+  },
+  "output": {
+    "tileset": "res://scenes/poc/tilesheet_tileset_poc.tres",
+    "scene": "res://scenes/poc/tilesheet_tilemap_poc.tscn"
+  },
+  "tiles": [
+    {"id": 0, "name": "grass", "rect": [0, 0, 16, 16], "color": "#5da65d"},
+    {"id": 1, "name": "grass_edge_n", "rect": [16, 0, 16, 16], "color": "#74b85e"},
+    {"id": 2, "name": "grass_edge_e", "rect": [32, 0, 16, 16], "color": "#69aa55"},
+    {"id": 3, "name": "grass_edge_s", "rect": [48, 0, 16, 16], "color": "#4f914f"},
+    {"id": 4, "name": "grass_edge_w", "rect": [64, 0, 16, 16], "color": "#579b57"},
+    {"id": 5, "name": "dirt", "rect": [80, 0, 16, 16], "color": "#9b7653"},
+    {"id": 6, "name": "dirt_path", "rect": [96, 0, 16, 16], "color": "#b58a5f"},
+    {"id": 7, "name": "stone", "rect": [112, 0, 16, 16], "color": "#7d858e"},
+    {"id": 8, "name": "water", "rect": [0, 16, 16, 16], "color": "#4b91c9"},
+    {"id": 9, "name": "water_edge", "rect": [16, 16, 16, 16], "color": "#6eb6d7"},
+    {"id": 10, "name": "flower_patch", "rect": [32, 16, 16, 16], "color": "#6bb65a"},
+    {"id": 11, "name": "shadow_grass", "rect": [48, 16, 16, 16], "color": "#407a4a"}
+  ],
+  "cells": [
+    {"x": 0, "y": 0, "tile": 8}, {"x": 1, "y": 0, "tile": 9}, {"x": 2, "y": 0, "tile": 0}, {"x": 3, "y": 0, "tile": 0}, {"x": 4, "y": 0, "tile": 0}, {"x": 5, "y": 0, "tile": 0}, {"x": 6, "y": 0, "tile": 1}, {"x": 7, "y": 0, "tile": 1},
+    {"x": 0, "y": 1, "tile": 8}, {"x": 1, "y": 1, "tile": 9}, {"x": 2, "y": 1, "tile": 0}, {"x": 3, "y": 1, "tile": 10}, {"x": 4, "y": 1, "tile": 0}, {"x": 5, "y": 1, "tile": 5}, {"x": 6, "y": 1, "tile": 6}, {"x": 7, "y": 1, "tile": 5},
+    {"x": 0, "y": 2, "tile": 9}, {"x": 1, "y": 2, "tile": 0}, {"x": 2, "y": 2, "tile": 0}, {"x": 3, "y": 2, "tile": 0}, {"x": 4, "y": 2, "tile": 5}, {"x": 5, "y": 2, "tile": 6}, {"x": 6, "y": 2, "tile": 6}, {"x": 7, "y": 2, "tile": 5},
+    {"x": 0, "y": 3, "tile": 0}, {"x": 1, "y": 3, "tile": 0}, {"x": 2, "y": 3, "tile": 11}, {"x": 3, "y": 3, "tile": 0}, {"x": 4, "y": 3, "tile": 0}, {"x": 5, "y": 3, "tile": 5}, {"x": 6, "y": 3, "tile": 7}, {"x": 7, "y": 3, "tile": 5},
+    {"x": 0, "y": 4, "tile": 3}, {"x": 1, "y": 4, "tile": 3}, {"x": 2, "y": 4, "tile": 0}, {"x": 3, "y": 4, "tile": 0}, {"x": 4, "y": 4, "tile": 0}, {"x": 5, "y": 4, "tile": 0}, {"x": 6, "y": 4, "tile": 2}, {"x": 7, "y": 4, "tile": 2}
+  ]
+}
