@@ -3,6 +3,7 @@ extends Node
 const GridMapModelScript := preload("res://scripts/map/grid_map_model.gd")
 
 @onready var _debug_overlay := $World/DebugOverlay
+@onready var _map_renderer := $World/Map
 @onready var _debug_readout := $UI/DebugReadout
 
 var _map_model: RefCounted
@@ -17,6 +18,7 @@ func _ready() -> void:
 		push_error(load_result.error)
 		return
 
+	_map_renderer.set_map_model(_map_model)
 	_debug_overlay.set_map_model(_map_model)
 	_debug_readout.set_seed(_map_model.seed)
 	_debug_overlay.debug_state_changed.connect(_debug_readout.set_overlay_state)
