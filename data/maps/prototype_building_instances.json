@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "map_id": "prototype_map",
+  "instances": [
+    {
+      "instance_id": "prototype_map_town_hall_001",
+      "definition_id": "town_hall",
+      "origin_cell": {
+        "x": 8,
+        "y": 6
+      }
+    },
+    {
+      "instance_id": "prototype_map_bakery_001",
+      "definition_id": "bakery",
+      "origin_cell": {
+        "x": 14,
+        "y": 9
+      }
+    },
+    {
+      "instance_id": "prototype_map_house_001",
+      "definition_id": "house",
+      "origin_cell": {
+        "x": 20,
+        "y": 12
+      }
+    }
+  ]
+}
