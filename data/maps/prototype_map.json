@@ -1,6 +1,6 @@
 {
-  "grid_width": 24,
-  "grid_height": 16,
+  "grid_width": 80,
+  "grid_height": 60,
   "cell_size": 32,
   "origin": {
     "x": 0,
@@ -8,7 +8,7 @@
   },
   "seed": 20260531,
   "player_spawn_cell": {
-    "x": 2,
-    "y": 2
+    "x": 40,
+    "y": 30
   }
 }

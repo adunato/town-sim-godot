@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scripts/player/player_controller.gd" id="1_6f3ka"]
+[ext_resource type="Script" path="res://scripts/camera/player_camera_controller.gd" id="2_7e8ur"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_8n65a"]
 radius = 12.0
@@ -11,3 +12,6 @@ script = ExtResource("1_6f3ka")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_8n65a")
+
+[node name="PlayerCamera" type="Camera2D" parent="."]
+script = ExtResource("2_7e8ur")
