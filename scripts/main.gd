@@ -22,6 +22,7 @@ func _ready() -> void:
 
 	_map_renderer.set_map_model(_map_model)
 	_place_player_at_spawn()
+	_configure_player_camera()
 	_debug_overlay.set_map_model(_map_model)
 	_debug_readout.set_seed(_map_model.seed)
 	_debug_overlay.debug_state_changed.connect(_debug_readout.set_overlay_state)
@@ -57,6 +58,21 @@ func _place_player_at_spawn() -> void:
 		return
 
 	_player.global_position = spawn_result.world_position
+
+
+func _configure_player_camera() -> void:
+	if not _player.has_node("PlayerCamera"):
+		push_error("Unable to configure player camera: PlayerCamera node is missing.")
+		return
+
+	var camera := _player.get_node("PlayerCamera")
+	if not camera.has_method("configure_for_map"):
+		push_error("Unable to configure player camera: PlayerCamera does not expose configure_for_map.")
+		return
+
+	var configure_result: Dictionary = camera.call("configure_for_map", _map_model)
+	if not configure_result.ok:
+		push_error("Unable to configure player camera: %s" % configure_result.error)
 
 
 func _add_key_action(action_name: StringName, keycode: Key) -> void:
