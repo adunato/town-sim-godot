@@ -10,10 +10,8 @@ const CELL_FILL_A := Color(0.55, 0.78, 0.42, 1.0)
 const CELL_FILL_B := Color(0.51, 0.75, 0.39, 1.0)
 const CELL_BORDER := Color(0.27, 0.48, 0.24, 0.28)
 const MAP_BOUNDARY := Color(0.20, 0.42, 0.18, 0.92)
-const BUILDING_OUTLINE := Color(0.15, 0.11, 0.08, 0.95)
 const CELL_BORDER_WIDTH := 1.0
 const MAP_BOUNDARY_WIDTH := 3.0
-const BUILDING_OUTLINE_WIDTH := 2.0
 
 @export var config_path := DEFAULT_CONFIG_PATH
 
@@ -132,7 +130,6 @@ func _draw() -> void:
 		return
 
 	_draw_cells()
-	_draw_buildings()
 	_draw_cell_borders()
 	_draw_map_boundary()
 
@@ -181,17 +178,6 @@ func _draw_cell_borders() -> void:
 
 func _draw_map_boundary() -> void:
 	draw_rect(get_map_bounds(), MAP_BOUNDARY, false, MAP_BOUNDARY_WIDTH)
-
-
-func _draw_buildings() -> void:
-	for instance in _building_instances:
-		var definition: Dictionary = _building_definitions_by_id.get(String(instance.definition_id), {})
-		if definition.is_empty():
-			continue
-		var rect := get_building_rect(instance)
-		var color := Color(String(definition.prototype_color))
-		draw_rect(rect, color, true)
-		draw_rect(rect, BUILDING_OUTLINE, false, BUILDING_OUTLINE_WIDTH)
 
 
 func _vector2i_from_dictionary(value: Dictionary) -> Vector2i:

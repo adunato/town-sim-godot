@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_ojyr8"]
 [ext_resource type="Script" path="res://scripts/map/map_renderer.gd" id="2_4f5q0"]
-[ext_resource type="Script" path="res://scripts/buildings/building_collision_spawner.gd" id="3_b3h4i"]
+[ext_resource type="Script" path="res://scripts/buildings/building_entity_spawner.gd" id="3_b3h4i"]
 [ext_resource type="Script" path="res://scripts/debug/debug_overlay.gd" id="2_abm7f"]
 [ext_resource type="Script" path="res://scripts/debug/debug_readout.gd" id="3_wdgty"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="4_xq3sr"]
@@ -17,7 +17,7 @@ script = ExtResource("2_4f5q0")
 
 [node name="Player" parent="World" instance=ExtResource("4_xq3sr")]
 
-[node name="BuildingCollisions" type="Node2D" parent="World"]
+[node name="Buildings" type="Node2D" parent="World"]
 script = ExtResource("3_b3h4i")
 
 [node name="DebugOverlay" type="Node2D" parent="World"]

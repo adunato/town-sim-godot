@@ -6,7 +6,7 @@ const BuildingDataRegistryScript := preload("res://scripts/buildings/building_da
 @onready var _debug_overlay := $World/DebugOverlay
 @onready var _map_renderer := $World/Map
 @onready var _player := $World/Player
-@onready var _building_collisions := $World/BuildingCollisions
+@onready var _buildings := $World/Buildings
 @onready var _debug_readout := $UI/DebugReadout
 
 var _map_model: RefCounted
@@ -23,7 +23,7 @@ func _ready() -> void:
 		return
 
 	_map_renderer.set_map_model(_map_model)
-	_configure_building_collisions()
+	_configure_building_entities()
 	_place_player_at_spawn()
 	_configure_player_camera()
 	_debug_overlay.set_map_model(_map_model)
@@ -32,20 +32,20 @@ func _ready() -> void:
 	_debug_readout.set_overlay_state(_debug_overlay.is_overlay_enabled(), _debug_overlay.current_mode, _debug_overlay.get_legend_entries())
 
 
-func _configure_building_collisions() -> void:
+func _configure_building_entities() -> void:
 	if not _map_renderer.get_placement_error().is_empty():
-		push_error("Unable to configure building collision: %s" % _map_renderer.get_placement_error())
+		push_error("Unable to configure building entities: %s" % _map_renderer.get_placement_error())
 		return
 
 	var registry := BuildingDataRegistryScript.new()
 	var definitions_result: Dictionary = registry.load_definitions()
 	if not definitions_result.ok:
-		push_error("Unable to configure building collision: %s" % definitions_result.error)
+		push_error("Unable to configure building entities: %s" % definitions_result.error)
 		return
 
-	var collision_result: Dictionary = _building_collisions.build_from_instances(_map_model, registry, _map_renderer.get_building_instances())
-	if not collision_result.ok:
-		push_error("Unable to configure building collision: %s" % collision_result.error)
+	var entity_result: Dictionary = _buildings.build_from_instances(_map_model, registry, _map_renderer.get_building_instances())
+	if not entity_result.ok:
+		push_error("Unable to configure building entities: %s" % entity_result.error)
 
 
 func _unhandled_input(event: InputEvent) -> void:

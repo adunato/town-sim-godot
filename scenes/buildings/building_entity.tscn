@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/buildings/building_entity.gd" id="1_building_entity"]
+[ext_resource type="Script" path="res://scripts/buildings/building_entity_visual.gd" id="2_building_visual"]
+
+[node name="BuildingEntity" type="Node2D"]
+script = ExtResource("1_building_entity")
+
+[node name="Visual" type="Node2D" parent="."]
+script = ExtResource("2_building_visual")
+z_index = -10
+
+[node name="CollisionBody" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="CollisionBody"]

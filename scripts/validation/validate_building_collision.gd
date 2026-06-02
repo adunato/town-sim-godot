@@ -1,7 +1,7 @@
 extends SceneTree
 
-const BuildingCollisionSpawnerScript := preload("res://scripts/buildings/building_collision_spawner.gd")
 const BuildingDataRegistryScript := preload("res://scripts/buildings/building_data_registry.gd")
+const BuildingEntitySpawnerScript := preload("res://scripts/buildings/building_entity_spawner.gd")
 const GridMapModelScript := preload("res://scripts/map/grid_map_model.gd")
 const MainScene := preload("res://scenes/main.tscn")
 const MapRendererScript := preload("res://scripts/map/map_renderer.gd")
@@ -55,12 +55,12 @@ func _build_collision_fixture() -> Dictionary:
 	if not renderer.get_placement_error().is_empty():
 		return _failure("map renderer should generate building placement: %s" % renderer.get_placement_error())
 
-	var spawner := BuildingCollisionSpawnerScript.new()
+	var spawner := BuildingEntitySpawnerScript.new()
 	get_root().add_child(spawner)
 	var instances := renderer.get_building_instances()
-	var collision_result: Dictionary = spawner.build_from_instances(model, registry, instances)
-	if not collision_result.ok:
-		return _failure("building collision generation should succeed: %s" % collision_result.get("error", ""))
+	var entity_result: Dictionary = spawner.build_from_instances(model, registry, instances)
+	if not entity_result.ok:
+		return _failure("building entity generation should succeed: %s" % entity_result.get("error", ""))
 
 	return {
 		"ok": true,
@@ -134,13 +134,14 @@ func _verify_startup_scene() -> void:
 	await process_frame
 	await physics_frame
 
-	_expect(scene.has_node("World/BuildingCollisions"), "startup scene should contain World/BuildingCollisions")
-	if scene.has_node("World/BuildingCollisions") and scene.has_node("World/Map"):
-		var collisions := scene.get_node("World/BuildingCollisions")
+	_expect(scene.has_node("World/Buildings"), "startup scene should contain World/Buildings")
+	_expect(not scene.has_node("World/BuildingCollisions"), "startup scene should not rely on detached World/BuildingCollisions")
+	if scene.has_node("World/Buildings") and scene.has_node("World/Map"):
+		var buildings := scene.get_node("World/Buildings")
 		var map := scene.get_node("World/Map")
-		var bodies: Array[StaticBody2D] = collisions.call("get_collision_bodies")
+		var bodies: Array[StaticBody2D] = buildings.call("get_collision_bodies")
 		var instances: Array[Dictionary] = map.call("get_building_instances")
-		_expect(bodies.size() == instances.size(), "startup scene should create one collision body per generated building instance")
+		_expect(bodies.size() == instances.size(), "startup scene should create one building-owned collision body per generated building instance")
 
 	scene.queue_free()
 	await process_frame
