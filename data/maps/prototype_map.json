@@ -10,5 +10,24 @@
   "player_spawn_cell": {
     "x": 40,
     "y": 30
+  },
+  "building_placement": {
+    "requested_models": [
+      {
+        "definition_id": "town_hall",
+        "count": 1
+      },
+      {
+        "definition_id": "bakery",
+        "count": 2
+      },
+      {
+        "definition_id": "house",
+        "count": 4
+      }
+    ],
+    "minimum_building_spacing": 2,
+    "retry_limit": 400,
+    "spawn_clearance": 3
   }
 }

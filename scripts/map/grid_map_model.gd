@@ -13,6 +13,7 @@ var cell_size: int = 0
 var origin: Vector2 = Vector2.ZERO
 var seed: int = 0
 var player_spawn_cell: Vector2i = Vector2i.ZERO
+var building_placement_config: Dictionary = {}
 
 var _cell_states: Dictionary = {}
 
@@ -40,6 +41,7 @@ func initialize_from_config(config: Dictionary, source_name: String = "<memory>"
 	origin = _vector2_from_dictionary(config.origin)
 	seed = int(config.seed)
 	player_spawn_cell = _vector2i_from_dictionary(config.player_spawn_cell)
+	building_placement_config = config.get("building_placement", {}).duplicate(true)
 	_cell_states.clear()
 
 	var spawn_result := reserve_rect(player_spawn_cell, Vector2i.ONE, STATE_RESERVED)
