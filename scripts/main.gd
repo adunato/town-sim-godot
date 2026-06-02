@@ -1,10 +1,12 @@
 extends Node
 
 const GridMapModelScript := preload("res://scripts/map/grid_map_model.gd")
+const BuildingDataRegistryScript := preload("res://scripts/buildings/building_data_registry.gd")
 
 @onready var _debug_overlay := $World/DebugOverlay
 @onready var _map_renderer := $World/Map
 @onready var _player := $World/Player
+@onready var _building_collisions := $World/BuildingCollisions
 @onready var _debug_readout := $UI/DebugReadout
 
 var _map_model: RefCounted
@@ -21,12 +23,29 @@ func _ready() -> void:
 		return
 
 	_map_renderer.set_map_model(_map_model)
+	_configure_building_collisions()
 	_place_player_at_spawn()
 	_configure_player_camera()
 	_debug_overlay.set_map_model(_map_model)
 	_debug_readout.set_seed(_map_model.seed)
 	_debug_overlay.debug_state_changed.connect(_debug_readout.set_overlay_state)
 	_debug_readout.set_overlay_state(_debug_overlay.is_overlay_enabled(), _debug_overlay.current_mode, _debug_overlay.get_legend_entries())
+
+
+func _configure_building_collisions() -> void:
+	if not _map_renderer.get_placement_error().is_empty():
+		push_error("Unable to configure building collision: %s" % _map_renderer.get_placement_error())
+		return
+
+	var registry := BuildingDataRegistryScript.new()
+	var definitions_result: Dictionary = registry.load_definitions()
+	if not definitions_result.ok:
+		push_error("Unable to configure building collision: %s" % definitions_result.error)
+		return
+
+	var collision_result: Dictionary = _building_collisions.build_from_instances(_map_model, registry, _map_renderer.get_building_instances())
+	if not collision_result.ok:
+		push_error("Unable to configure building collision: %s" % collision_result.error)
 
 
 func _unhandled_input(event: InputEvent) -> void:
