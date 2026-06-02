@@ -7,6 +7,7 @@ const BuildingDataRegistryScript := preload("res://scripts/buildings/building_da
 @onready var _map_renderer := $World/Map
 @onready var _player := $World/Player
 @onready var _buildings := $World/Buildings
+@onready var _picking_controller := $World/PickingController
 @onready var _selection_controller := $World/SelectionController
 @onready var _debug_readout := $UI/DebugReadout
 
@@ -26,6 +27,7 @@ func _ready() -> void:
 
 	_map_renderer.set_map_model(_map_model)
 	_configure_building_entities()
+	_configure_picking()
 	_place_player_at_spawn()
 	_configure_player_camera()
 	_debug_overlay.set_map_model(_map_model)
@@ -50,6 +52,12 @@ func _configure_building_entities() -> void:
 		push_error("Unable to configure building entities: %s" % entity_result.error)
 
 
+func _configure_picking() -> void:
+	var picking_result: Dictionary = _picking_controller.configure(_buildings)
+	if not picking_result.ok:
+		push_error("Unable to configure picking: %s" % picking_result.error)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_debug_overlay") or _is_key_pressed(event, KEY_F3):
 		_debug_overlay.toggle_overlay()
@@ -60,6 +68,8 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("select_entity") or _is_left_mouse_pressed(event):
 		_apply_selection_input(event)
 		get_viewport().set_input_as_handled()
+	elif event is InputEventMouseMotion:
+		_picking_controller.update_hover_at_screen_position(event.position)
 
 
 func _ensure_debug_input_actions() -> void:
@@ -129,8 +139,16 @@ func _add_mouse_button_action(action_name: StringName, button_index: MouseButton
 	InputMap.action_add_event(action_name, mouse_event)
 
 
-func _apply_selection_input(_event: InputEvent) -> void:
-	_selection_controller.apply_picked_target(null)
+func _apply_selection_input(event: InputEvent) -> void:
+	var screen_position := get_viewport().get_mouse_position()
+	if event is InputEventMouseButton:
+		screen_position = event.position
+
+	var pick_result: Dictionary = _picking_controller.pick_at_screen_position(screen_position)
+	if bool(pick_result.get("has_target", false)):
+		_selection_controller.apply_picked_target(pick_result.target)
+	else:
+		_selection_controller.apply_picked_target(null)
 
 
 func _is_key_pressed(event: InputEvent, keycode: Key) -> bool:
