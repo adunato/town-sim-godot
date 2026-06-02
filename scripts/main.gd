@@ -7,6 +7,7 @@ const BuildingDataRegistryScript := preload("res://scripts/buildings/building_da
 @onready var _map_renderer := $World/Map
 @onready var _player := $World/Player
 @onready var _buildings := $World/Buildings
+@onready var _selection_controller := $World/SelectionController
 @onready var _debug_readout := $UI/DebugReadout
 
 var _map_model: RefCounted
@@ -15,6 +16,7 @@ var _map_model: RefCounted
 func _ready() -> void:
 	_ensure_debug_input_actions()
 	_ensure_movement_input_actions()
+	_ensure_selection_input_actions()
 	_map_model = GridMapModelScript.new()
 
 	var load_result: Dictionary = _map_model.load_from_file()
@@ -55,6 +57,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("cycle_debug_overlay") or _is_key_pressed(event, KEY_F4):
 		_debug_overlay.cycle_mode()
 		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("select_entity") or _is_left_mouse_pressed(event):
+		_apply_selection_input(event)
+		get_viewport().set_input_as_handled()
 
 
 func _ensure_debug_input_actions() -> void:
@@ -67,6 +72,10 @@ func _ensure_movement_input_actions() -> void:
 	_add_key_action("move_down", KEY_S)
 	_add_key_action("move_left", KEY_A)
 	_add_key_action("move_right", KEY_D)
+
+
+func _ensure_selection_input_actions() -> void:
+	_add_mouse_button_action("select_entity", MOUSE_BUTTON_LEFT)
 
 
 func _place_player_at_spawn() -> void:
@@ -107,5 +116,28 @@ func _add_key_action(action_name: StringName, keycode: Key) -> void:
 	InputMap.action_add_event(action_name, key_event)
 
 
+func _add_mouse_button_action(action_name: StringName, button_index: MouseButton) -> void:
+	if not InputMap.has_action(action_name):
+		InputMap.add_action(action_name)
+
+	for event in InputMap.action_get_events(action_name):
+		if event is InputEventMouseButton and event.button_index == button_index:
+			return
+
+	var mouse_event := InputEventMouseButton.new()
+	mouse_event.button_index = button_index
+	InputMap.action_add_event(action_name, mouse_event)
+
+
+func _apply_selection_input(_event: InputEvent) -> void:
+	_selection_controller.apply_picked_target(null)
+
+
 func _is_key_pressed(event: InputEvent, keycode: Key) -> bool:
 	return event is InputEventKey and event.pressed and not event.echo and event.keycode == keycode
+
+
+func _is_left_mouse_pressed(event: InputEvent) -> bool:
+	return event is InputEventMouseButton \
+		and event.pressed \
+		and event.button_index == MOUSE_BUTTON_LEFT

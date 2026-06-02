@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=3 uid="uid://bwp1sm7h7h3ua"]
+[gd_scene load_steps=8 format=3 uid="uid://bwp1sm7h7h3ua"]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_ojyr8"]
 [ext_resource type="Script" path="res://scripts/map/map_renderer.gd" id="2_4f5q0"]
@@ -6,6 +6,7 @@
 [ext_resource type="Script" path="res://scripts/debug/debug_overlay.gd" id="2_abm7f"]
 [ext_resource type="Script" path="res://scripts/debug/debug_readout.gd" id="3_wdgty"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="4_xq3sr"]
+[ext_resource type="Script" path="res://scripts/entities/selection_controller.gd" id="5_42bns"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_ojyr8")
@@ -19,6 +20,9 @@ script = ExtResource("2_4f5q0")
 
 [node name="Buildings" type="Node2D" parent="World"]
 script = ExtResource("3_b3h4i")
+
+[node name="SelectionController" type="Node" parent="World"]
+script = ExtResource("5_42bns")
 
 [node name="DebugOverlay" type="Node2D" parent="World"]
 script = ExtResource("2_abm7f")
