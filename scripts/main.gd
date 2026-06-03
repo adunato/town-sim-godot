@@ -9,6 +9,7 @@ const BuildingDataRegistryScript := preload("res://scripts/buildings/building_da
 @onready var _buildings := $World/Buildings
 @onready var _picking_controller := $World/PickingController
 @onready var _selection_controller := $World/SelectionController
+@onready var _highlight_controller := $World/HighlightController
 @onready var _debug_readout := $UI/DebugReadout
 
 var _map_model: RefCounted
@@ -28,6 +29,7 @@ func _ready() -> void:
 	_map_renderer.set_map_model(_map_model)
 	_configure_building_entities()
 	_configure_picking()
+	_configure_highlights()
 	_place_player_at_spawn()
 	_configure_player_camera()
 	_debug_overlay.set_map_model(_map_model)
@@ -56,6 +58,12 @@ func _configure_picking() -> void:
 	var picking_result: Dictionary = _picking_controller.configure(_buildings)
 	if not picking_result.ok:
 		push_error("Unable to configure picking: %s" % picking_result.error)
+
+
+func _configure_highlights() -> void:
+	var highlight_result: Dictionary = _highlight_controller.configure(_buildings, _selection_controller, _picking_controller)
+	if not highlight_result.ok:
+		push_error("Unable to configure highlights: %s" % highlight_result.error)
 
 
 func _unhandled_input(event: InputEvent) -> void:
