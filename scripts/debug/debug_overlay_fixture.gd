@@ -49,9 +49,7 @@ func _add_building_fixture() -> void:
 	var building := _new_fixture_entity("MockBuilding", _cell_center(Vector2i(6, 6)))
 	var footprint_cells: Array[Vector2i] = [Vector2i(6, 6), Vector2i(7, 6), Vector2i(6, 7), Vector2i(7, 7)]
 	building.debug_footprint_cells = footprint_cells
-	building.entity_id = "building.mock-shop"
-	building.display_name = "Mock Shop"
-	building.entity_type = "building"
+	building.configure_identity("building.mock-shop", "Mock Shop", "building")
 	building.add_to_group("debug_building_footprints")
 	building.add_to_group("debug_building_collision")
 	building.add_to_group("debug_entity_labels")
@@ -71,9 +69,7 @@ func _add_building_fixture() -> void:
 func _add_player_fixture() -> void:
 	var player := _new_fixture_entity("MockPlayer", _cell_center(Vector2i(3, 5)))
 	player.proximity_radius = 82.0
-	player.entity_id = "player.fixture"
-	player.display_name = "Fixture Player"
-	player.entity_type = "player"
+	player.configure_identity("player.fixture", "Fixture Player", "player")
 	player.add_to_group("debug_player_collision")
 	player.add_to_group("debug_proximity")
 	player.add_to_group("debug_entity_labels")
@@ -88,16 +84,12 @@ func _add_player_fixture() -> void:
 
 func _add_entity_fixtures() -> void:
 	var hovered := _new_fixture_entity("MockHoveredEntity", _cell_center(Vector2i(13, 4)))
-	hovered.entity_id = "npc.hovered"
-	hovered.display_name = "Hovered NPC"
-	hovered.entity_type = "npc"
+	hovered.configure_identity("npc.hovered", "Hovered NPC", "npc")
 	hovered.add_to_group("debug_hovered_target")
 	hovered.add_to_group("debug_entity_labels")
 
 	var selected := _new_fixture_entity("MockSelectedEntity", _cell_center(Vector2i(17, 8)))
-	selected.entity_id = "npc.selected"
-	selected.display_name = "Selected NPC"
-	selected.entity_type = "npc"
+	selected.configure_identity("npc.selected", "Selected NPC", "npc")
 	selected.add_to_group("debug_selected_target")
 	selected.add_to_group("debug_entity_labels")
 

@@ -5,6 +5,7 @@ const GridMapModelScript := preload("res://scripts/map/grid_map_model.gd")
 const MainScene := preload("res://scenes/main.tscn")
 const MapRendererScript := preload("res://scripts/map/map_renderer.gd")
 const BuildingEntitySpawnerScript := preload("res://scripts/buildings/building_entity_spawner.gd")
+const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
 
 const RECT_TOLERANCE := 0.01
 const WORLD_COLLISION_LAYER := 1
@@ -96,6 +97,7 @@ func _verify_entity_contract(fixture: Dictionary) -> void:
 		var definition: Dictionary = definition_result.definition
 		var expected_rect := _expected_world_rect(model, instance, definition)
 		_verify_public_api(entity, instance, definition, expected_rect)
+		_verify_capability_components(entity, instance, definition, expected_rect)
 		_verify_visual(entity, expected_rect)
 		_verify_collision(entity, instance, definition, expected_rect)
 
@@ -113,6 +115,35 @@ func _verify_public_api(entity: Node, instance: Dictionary, definition: Dictiona
 	_expect(_rects_equal_approx(entity.call("get_world_rect"), expected_rect), "world_rect should match source data for '%s'" % instance.instance_id)
 	_expect(entity.call("is_selectable") == bool(definition.selectable), "selectable flag should match definition for '%s'" % instance.instance_id)
 	_expect(entity.call("is_interactable") == bool(definition.interactable), "interactable flag should match definition for '%s'" % instance.instance_id)
+
+
+func _verify_capability_components(entity: Node, instance: Dictionary, definition: Dictionary, expected_rect: Rect2) -> void:
+	var identity: Node = CapabilityResolverScript.get_identity(entity)
+	var pickable: Node = CapabilityResolverScript.get_pickable(entity)
+	var selectable: Node = CapabilityResolverScript.get_selectable(entity)
+	var highlightable: Node = CapabilityResolverScript.get_highlightable(entity)
+	var proximity_target: Node = CapabilityResolverScript.get_proximity_target(entity)
+	var interactable: Node = CapabilityResolverScript.get_interactable(entity)
+	_expect(identity != null, "building entity '%s' should have IdentityComponent" % instance.instance_id)
+	_expect(pickable != null, "building entity '%s' should have PickableComponent" % instance.instance_id)
+	_expect(selectable != null, "building entity '%s' should have SelectableComponent" % instance.instance_id)
+	_expect(highlightable != null, "building entity '%s' should have HighlightableComponent" % instance.instance_id)
+	_expect(proximity_target != null, "building entity '%s' should have ProximityTargetComponent" % instance.instance_id)
+	_expect(interactable != null, "building entity '%s' should have InteractableComponent" % instance.instance_id)
+	if identity != null:
+		_expect(String(identity.call("get_entity_id")) == String(instance.instance_id), "identity component entity_id should match '%s'" % instance.instance_id)
+		_expect(String(identity.call("get_entity_type")) == "building", "identity component entity_type should be building for '%s'" % instance.instance_id)
+		_expect(String(identity.call("get_display_name")) == String(definition.display_name), "identity component display_name should match '%s'" % instance.instance_id)
+	if pickable != null:
+		_expect(_rects_equal_approx(pickable.call("get_world_rect"), expected_rect), "pickable component world_rect should match '%s'" % instance.instance_id)
+	if selectable != null:
+		_expect(bool(selectable.call("is_selectable")) == bool(definition.selectable), "selectable component flag should match '%s'" % instance.instance_id)
+	if highlightable != null:
+		_expect(highlightable.call("get_resolved_highlight_state") == &"default", "highlightable component should start default for '%s'" % instance.instance_id)
+	if proximity_target != null:
+		_expect(_rects_equal_approx(proximity_target.call("get_proximity_rect"), expected_rect), "proximity target component rect should match '%s'" % instance.instance_id)
+	if interactable != null:
+		_expect(bool(interactable.call("is_interactable")) == bool(definition.interactable), "interactable component flag should match '%s'" % instance.instance_id)
 
 
 func _verify_visual(entity: Node, expected_rect: Rect2) -> void:
@@ -167,6 +198,12 @@ func _verify_startup_scene() -> void:
 		_expect(entities.size() == instances.size(), "startup scene should create one building entity per generated building instance")
 		for entity in entities:
 			_expect(entity.get_parent() == buildings, "building entity '%s' should be owned by World/Buildings" % entity.call("get_source_instance_id"))
+			_expect(CapabilityResolverScript.get_identity(entity) != null, "startup building '%s' should expose identity through component" % entity.call("get_source_instance_id"))
+			_expect(CapabilityResolverScript.get_pickable(entity) != null, "startup building '%s' should expose picking through component" % entity.call("get_source_instance_id"))
+			_expect(CapabilityResolverScript.get_selectable(entity) != null, "startup building '%s' should expose selection through component" % entity.call("get_source_instance_id"))
+			_expect(CapabilityResolverScript.get_highlightable(entity) != null, "startup building '%s' should expose highlighting through component" % entity.call("get_source_instance_id"))
+			_expect(CapabilityResolverScript.get_proximity_target(entity) != null, "startup building '%s' should expose proximity through component" % entity.call("get_source_instance_id"))
+			_expect(CapabilityResolverScript.get_interactable(entity) != null, "startup building '%s' should expose interaction availability through component" % entity.call("get_source_instance_id"))
 
 	scene.queue_free()
 	await process_frame

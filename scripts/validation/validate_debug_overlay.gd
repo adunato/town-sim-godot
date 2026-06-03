@@ -3,6 +3,7 @@ extends SceneTree
 const DebugOverlayScript := preload("res://scripts/debug/debug_overlay.gd")
 const FixtureScene := preload("res://scenes/debug/debug_overlay_fixture.tscn")
 const GridMapModelScript := preload("res://scripts/map/grid_map_model.gd")
+const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
 
 var _failures: Array[String] = []
 
@@ -80,6 +81,8 @@ func _verify_fixture_scene_contracts() -> void:
 	_expect(get_nodes_in_group("debug_building_collision").size() > 0, "fixture should expose building collision debug nodes")
 	_expect(get_nodes_in_group("debug_proximity").size() > 0, "fixture should expose proximity debug nodes")
 	_expect(get_nodes_in_group("debug_entity_labels").size() >= 3, "fixture should expose entity label debug nodes")
+	for node in get_nodes_in_group("debug_entity_labels"):
+		_expect(CapabilityResolverScript.get_identity(node) != null, "debug entity label node '%s' should expose identity through component" % node.name)
 	_expect(get_nodes_in_group("debug_hovered_target").size() > 0, "fixture should expose hovered target debug nodes")
 	_expect(get_nodes_in_group("debug_selected_target").size() > 0, "fixture should expose selected target debug nodes")
 

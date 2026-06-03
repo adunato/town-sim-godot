@@ -1,6 +1,11 @@
 extends SceneTree
 
 const MainScene := preload("res://scenes/main.tscn")
+const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
+const IdentityComponentScript := preload("res://scripts/entities/components/identity_component.gd")
+const PickableComponentScript := preload("res://scripts/entities/components/pickable_component.gd")
+const SelectableComponentScript := preload("res://scripts/entities/components/selectable_component.gd")
+const InteractableComponentScript := preload("res://scripts/entities/components/interactable_component.gd")
 const PickingControllerScript := preload("res://scripts/entities/picking_controller.gd")
 const SelectionControllerScript := preload("res://scripts/entities/selection_controller.gd")
 
@@ -108,7 +113,13 @@ func _verify_main_scene_integration() -> void:
 		return
 
 	var target := entities[0]
-	var world_rect: Rect2 = target.call("get_world_rect")
+	var pickable := CapabilityResolverScript.get_pickable(target)
+	_expect(pickable != null, "generated building should expose PickableComponent for picking validation")
+	if pickable == null:
+		scene.queue_free()
+		await process_frame
+		return
+	var world_rect: Rect2 = pickable.call("get_world_rect")
 	var screen_position: Vector2 = get_root().get_canvas_transform() * world_rect.get_center()
 	var pick_result: Dictionary = picker.call("pick_at_screen_position", screen_position)
 	_expect(bool(pick_result.get("has_target", false)), "screen-space pick over generated building should find a target")
@@ -194,21 +205,19 @@ class MockBuildingEntity:
 		_world_rect = world_rect
 		_selectable = selectable
 		_interactable = interactable
-
-	func get_world_rect() -> Rect2:
-		return _world_rect
-
-	func get_entity_id() -> String:
-		return _entity_id
-
-	func get_entity_type() -> String:
-		return "building"
-
-	func get_display_name() -> String:
-		return _display_name
-
-	func is_selectable() -> bool:
-		return _selectable
-
-	func is_interactable() -> bool:
-		return _interactable
+		var identity := IdentityComponentScript.new()
+		identity.name = "IdentityComponent"
+		add_child(identity)
+		identity.configure(_entity_id, "building", _display_name)
+		var pickable := PickableComponentScript.new()
+		pickable.name = "PickableComponent"
+		add_child(pickable)
+		pickable.configure(_world_rect)
+		var selectable_component := SelectableComponentScript.new()
+		selectable_component.name = "SelectableComponent"
+		add_child(selectable_component)
+		selectable_component.configure(_selectable)
+		var interactable_component := InteractableComponentScript.new()
+		interactable_component.name = "InteractableComponent"
+		add_child(interactable_component)
+		interactable_component.configure(_interactable)

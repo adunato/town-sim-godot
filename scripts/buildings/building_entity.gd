@@ -8,6 +8,12 @@ const WORLD_COLLISION_LAYER := 1
 var _visual: Node2D
 var _collision_body: StaticBody2D
 var _collision_shape: CollisionShape2D
+var _identity_component: Node
+var _pickable_component: Node
+var _selectable_component: Node
+var _highlightable_component: Node
+var _proximity_target_component: Node
+var _interactable_component: Node
 
 var _instance: Dictionary = {}
 var _definition: Dictionary = {}
@@ -35,6 +41,9 @@ func configure(map_model: RefCounted, instance: Dictionary, definition: Dictiona
 
 	_visual.configure(rect_size, Color(String(definition.prototype_color)))
 	_configure_collision(rect_size)
+	var component_result := _configure_components()
+	if not component_result.ok:
+		return component_result
 	_configure_debug_groups()
 	_is_configured = true
 
@@ -45,6 +54,12 @@ func _bind_child_nodes() -> void:
 	_visual = get_node("Visual") as Node2D
 	_collision_body = get_node("CollisionBody") as StaticBody2D
 	_collision_shape = get_node("CollisionBody/CollisionShape2D") as CollisionShape2D
+	_identity_component = get_node("IdentityComponent")
+	_pickable_component = get_node("PickableComponent")
+	_selectable_component = get_node("SelectableComponent")
+	_highlightable_component = get_node("HighlightableComponent")
+	_proximity_target_component = get_node("ProximityTargetComponent")
+	_interactable_component = get_node("InteractableComponent")
 
 
 func is_configured() -> bool:
@@ -103,6 +118,30 @@ func get_visual_node() -> Node2D:
 	return _visual
 
 
+func get_identity_component() -> Node:
+	return _identity_component
+
+
+func get_pickable_component() -> Node:
+	return _pickable_component
+
+
+func get_selectable_component() -> Node:
+	return _selectable_component
+
+
+func get_highlightable_component() -> Node:
+	return _highlightable_component
+
+
+func get_proximity_target_component() -> Node:
+	return _proximity_target_component
+
+
+func get_interactable_component() -> Node:
+	return _interactable_component
+
+
 func get_debug_footprint_cells() -> Array[Vector2i]:
 	var cells: Array[Vector2i] = []
 	for y in range(_origin_cell.y, _origin_cell.y + _footprint_cells.y):
@@ -127,6 +166,21 @@ func _configure_collision(rect_size: Vector2) -> void:
 	var rectangle := RectangleShape2D.new()
 	rectangle.size = rect_size
 	_collision_shape.shape = rectangle
+
+
+func _configure_components() -> Dictionary:
+	var results: Array[Dictionary] = [
+		_identity_component.call("configure", get_entity_id(), get_entity_type(), get_display_name()),
+		_pickable_component.call("configure", get_world_rect()),
+		_selectable_component.call("configure", is_selectable()),
+		_highlightable_component.call("configure", _visual),
+		_proximity_target_component.call("configure", get_world_rect()),
+		_interactable_component.call("configure", is_interactable()),
+	]
+	for result in results:
+		if not result.ok:
+			return _failure("BuildingEntity component configuration failed for '%s': %s" % [get_source_instance_id(), result.error])
+	return _success()
 
 
 func _configure_debug_groups() -> void:

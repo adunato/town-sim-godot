@@ -1,6 +1,8 @@
 class_name HighlightController
 extends Node
 
+const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
+
 const INPUT_SELECTED := &"selected"
 const INPUT_HOVERED := &"hovered"
 const INPUT_INTERACTABLE := &"interactable"
@@ -61,8 +63,6 @@ const STATE_COLOURS := {
 var _buildings_owner: Node
 var _selection_controller: Node
 var _picking_controller: Node
-var _highlight_inputs: Dictionary = {}
-var _resolved_states: Dictionary = {}
 var _diagnostics: Array[String] = []
 var _selected_building: Node
 var _hovered_building: Node
@@ -96,19 +96,17 @@ func set_highlight_input(building: Node, input_flag: StringName, enabled: bool) 
 	if not register_result.ok:
 		return register_result
 
-	var input_state: Dictionary = _highlight_inputs.get(building, {})
-	if enabled:
-		input_state[input_flag] = true
-	else:
-		input_state.erase(input_flag)
-	_highlight_inputs[building] = input_state
-	return _apply_resolved_state(building)
+	var highlightable := CapabilityResolverScript.get_highlightable(building)
+	return highlightable.call("set_highlight_input", input_flag, enabled)
 
 
 func get_resolved_highlight_state(building: Node) -> StringName:
 	if building == null:
 		return STATE_DEFAULT
-	return _resolved_states.get(building, STATE_DEFAULT)
+	var highlightable := CapabilityResolverScript.get_highlightable(building)
+	if highlightable == null:
+		return STATE_DEFAULT
+	return highlightable.call("get_resolved_highlight_state")
 
 
 func get_diagnostics() -> Array[String]:
@@ -130,44 +128,12 @@ func _register_current_buildings() -> void:
 func _ensure_registered(building: Node) -> Dictionary:
 	if building == null:
 		return _failure("HighlightController cannot register a null building.")
-	if _highlight_inputs.has(building):
-		return _success()
-	if not building.has_method("get_visual_node"):
-		return _diagnose("HighlightController building '%s' does not expose get_visual_node." % _describe_building(building))
-	var visual := building.call("get_visual_node") as Node
-	if visual == null:
-		return _diagnose("HighlightController building '%s' has no usable visual target." % _describe_building(building))
-	if not visual.has_method("set_highlight_color"):
-		return _diagnose("HighlightController visual target for building '%s' does not expose set_highlight_color." % _describe_building(building))
-	if not visual.has_method("reset_highlight"):
-		return _diagnose("HighlightController visual target for building '%s' does not expose reset_highlight." % _describe_building(building))
-
-	_highlight_inputs[building] = {}
-	_resolved_states[building] = STATE_DEFAULT
+	var highlightable := CapabilityResolverScript.get_highlightable(building)
+	if highlightable == null:
+		return _diagnose("HighlightController target '%s' has no HighlightableComponent." % _describe_building(building))
 	if not building.tree_exiting.is_connected(_on_registered_building_tree_exiting.bind(building)):
 		building.tree_exiting.connect(_on_registered_building_tree_exiting.bind(building))
-	return _apply_resolved_state(building)
-
-
-func _apply_resolved_state(building: Node) -> Dictionary:
-	var visual := building.call("get_visual_node") as Node
-	if visual == null:
-		return _diagnose("HighlightController building '%s' has no usable visual target." % _describe_building(building))
-
-	var resolved_state := resolve_highlight_state(_highlight_inputs.get(building, {}))
-	_resolved_states[building] = resolved_state
-	if resolved_state == STATE_DEFAULT:
-		visual.call("reset_highlight")
-		return _success({"resolved_state": resolved_state})
-
-	var colour_data: Dictionary = STATE_COLOURS[resolved_state]
-	visual.call(
-		"set_highlight_color",
-		colour_data.fill,
-		colour_data.outline,
-		float(colour_data.outline_width)
-	)
-	return _success({"resolved_state": resolved_state})
+	return _success()
 
 
 func _connect_controller_signals() -> void:
@@ -225,8 +191,6 @@ func _get_building_entities() -> Array[Node]:
 
 
 func _on_registered_building_tree_exiting(building: Node) -> void:
-	_highlight_inputs.erase(building)
-	_resolved_states.erase(building)
 	if building == _selected_building:
 		_selected_building = null
 	if building == _hovered_building:
@@ -236,8 +200,9 @@ func _on_registered_building_tree_exiting(building: Node) -> void:
 func _describe_building(building: Node) -> String:
 	if building == null:
 		return "<null>"
-	if building.has_method("get_entity_id"):
-		var entity_id := String(building.call("get_entity_id"))
+	var identity := CapabilityResolverScript.get_identity(building)
+	if identity != null:
+		var entity_id := String(identity.call("get_entity_id"))
 		if not entity_id.is_empty():
 			return entity_id
 	return building.name

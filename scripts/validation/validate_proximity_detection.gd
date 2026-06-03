@@ -1,6 +1,9 @@
 extends SceneTree
 
 const MainScene := preload("res://scenes/main.tscn")
+const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
+const IdentityComponentScript := preload("res://scripts/entities/components/identity_component.gd")
+const ProximityTargetComponentScript := preload("res://scripts/entities/components/proximity_target_component.gd")
 const ProximityControllerScript := preload("res://scripts/entities/proximity_controller.gd")
 const DebugOverlayScript := preload("res://scripts/debug/debug_overlay.gd")
 
@@ -117,6 +120,12 @@ func _verify_main_scene_integration() -> void:
 	_expect(controller.has_method("is_entity_nearby"), "startup ProximityController should expose is_entity_nearby")
 	_expect(controller.has_method("get_proximity_snapshot"), "startup ProximityController should expose get_proximity_snapshot")
 	_expect(controller.call("is_configured"), "startup ProximityController should be configured")
+	if scene.has_node("World/Buildings"):
+		var buildings := scene.get_node("World/Buildings")
+		var entities: Array[Node] = buildings.call("get_building_entities")
+		for entity in entities:
+			_expect(CapabilityResolverScript.get_proximity_target(entity) != null, "startup building should expose ProximityTargetComponent")
+			_expect(CapabilityResolverScript.get_identity(entity) != null, "startup building should expose IdentityComponent for proximity IDs")
 
 	var snapshot: Dictionary = controller.call("get_proximity_snapshot")
 	_expect(float(snapshot.get("proximity_radius", 0.0)) > 0.0, "startup proximity snapshot should include positive radius")
@@ -170,18 +179,14 @@ class MockBuildingEntity:
 	func _init(entity_id: String, world_rect: Rect2) -> void:
 		_entity_id = entity_id
 		_world_rect = world_rect
-
-	func get_world_rect() -> Rect2:
-		return _world_rect
-
-	func get_entity_id() -> String:
-		return _entity_id
-
-	func get_display_name() -> String:
-		return _entity_id
-
-	func get_entity_type() -> String:
-		return "building"
+		var identity := IdentityComponentScript.new()
+		identity.name = "IdentityComponent"
+		add_child(identity)
+		identity.configure(_entity_id, "building", _entity_id)
+		var proximity_target := ProximityTargetComponentScript.new()
+		proximity_target.name = "ProximityTargetComponent"
+		add_child(proximity_target)
+		proximity_target.configure(_world_rect)
 
 
 class MockBuildingsOwner:

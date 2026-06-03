@@ -3,11 +3,14 @@ extends Node
 
 signal selection_changed(snapshot: Dictionary)
 
+const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
+
 const EMPTY_SELECTION_SNAPSHOT := {
 	"has_target": false,
 }
 
 var _selected_target: Node
+var _selected_component: Node
 var _selection_snapshot: Dictionary = EMPTY_SELECTION_SNAPSHOT.duplicate(true)
 
 
@@ -41,7 +44,11 @@ func select_target(target: Node) -> Dictionary:
 		return _success({"selected": true, "unchanged": true})
 
 	_disconnect_selected_target()
+	if _selected_component != null:
+		_selected_component.call("deselect")
 	_selected_target = target
+	_selected_component = CapabilityResolverScript.get_selectable(target)
+	_selected_component.call("select")
 	if not _selected_target.tree_exiting.is_connected(_on_selected_target_tree_exiting):
 		_selected_target.tree_exiting.connect(_on_selected_target_tree_exiting)
 	_update_snapshot_and_emit()
@@ -53,7 +60,10 @@ func clear_selection() -> bool:
 		return false
 
 	_disconnect_selected_target()
+	if _selected_component != null:
+		_selected_component.call("deselect")
 	_selected_target = null
+	_selected_component = null
 	_update_snapshot_and_emit()
 	return true
 
@@ -98,11 +108,11 @@ func _build_selection_snapshot(target: Node) -> Dictionary:
 
 	return {
 		"has_target": true,
-		"entity_id": String(target.call("get_entity_id")),
-		"entity_type": String(target.call("get_entity_type")),
-		"display_name": String(target.call("get_display_name")),
-		"selectable": bool(target.call("is_selectable")),
-		"interactable": bool(target.call("is_interactable")),
+		"entity_id": _get_entity_id(target),
+		"entity_type": _get_entity_type(target),
+		"display_name": _get_display_name(target),
+		"selectable": _target_reports_selectable(target),
+		"interactable": _target_reports_interactable(target),
 	}
 
 
@@ -111,15 +121,34 @@ func _is_selectable_target(target: Node) -> bool:
 
 
 func _has_required_entity_contract(target: Node) -> bool:
-	return target.has_method("get_entity_id") \
-		and target.has_method("get_entity_type") \
-		and target.has_method("get_display_name") \
-		and target.has_method("is_selectable") \
-		and target.has_method("is_interactable")
+	return target != null \
+		and CapabilityResolverScript.get_identity(target) != null \
+		and CapabilityResolverScript.get_selectable(target) != null
 
 
 func _target_reports_selectable(target: Node) -> bool:
-	return bool(target.call("is_selectable"))
+	var selectable := CapabilityResolverScript.get_selectable(target)
+	return selectable != null and bool(selectable.call("can_select"))
+
+
+func _target_reports_interactable(target: Node) -> bool:
+	var interactable := CapabilityResolverScript.get_interactable(target)
+	return interactable != null and bool(interactable.call("is_interactable"))
+
+
+func _get_entity_id(target: Node) -> String:
+	var identity := CapabilityResolverScript.get_identity(target)
+	return String(identity.call("get_entity_id")) if identity != null else ""
+
+
+func _get_entity_type(target: Node) -> String:
+	var identity := CapabilityResolverScript.get_identity(target)
+	return String(identity.call("get_entity_type")) if identity != null else ""
+
+
+func _get_display_name(target: Node) -> String:
+	var identity := CapabilityResolverScript.get_identity(target)
+	return String(identity.call("get_display_name")) if identity != null else ""
 
 
 func _disconnect_selected_target() -> void:
