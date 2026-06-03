@@ -1,7 +1,13 @@
-[gd_scene load_steps=3 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scripts/buildings/building_entity.gd" id="1_building_entity"]
 [ext_resource type="Script" path="res://scripts/buildings/building_entity_visual.gd" id="2_building_visual"]
+[ext_resource type="Script" path="res://scripts/entities/components/identity_component.gd" id="3_identity"]
+[ext_resource type="Script" path="res://scripts/entities/components/pickable_component.gd" id="4_pickable"]
+[ext_resource type="Script" path="res://scripts/entities/components/selectable_component.gd" id="5_selectable"]
+[ext_resource type="Script" path="res://scripts/entities/components/highlightable_component.gd" id="6_highlightable"]
+[ext_resource type="Script" path="res://scripts/entities/components/proximity_target_component.gd" id="7_proximity"]
+[ext_resource type="Script" path="res://scripts/entities/components/interactable_component.gd" id="8_interactable"]
 
 [node name="BuildingEntity" type="Node2D"]
 script = ExtResource("1_building_entity")
@@ -13,3 +19,21 @@ z_index = -10
 [node name="CollisionBody" type="StaticBody2D" parent="."]
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="CollisionBody"]
+
+[node name="IdentityComponent" type="Node" parent="."]
+script = ExtResource("3_identity")
+
+[node name="PickableComponent" type="Node" parent="."]
+script = ExtResource("4_pickable")
+
+[node name="SelectableComponent" type="Node" parent="."]
+script = ExtResource("5_selectable")
+
+[node name="HighlightableComponent" type="Node" parent="."]
+script = ExtResource("6_highlightable")
+
+[node name="ProximityTargetComponent" type="Node" parent="."]
+script = ExtResource("7_proximity")
+
+[node name="InteractableComponent" type="Node" parent="."]
+script = ExtResource("8_interactable")

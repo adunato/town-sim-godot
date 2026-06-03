@@ -1,6 +1,12 @@
 extends SceneTree
 
 const MainScene := preload("res://scenes/main.tscn")
+const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
+const IdentityComponentScript := preload("res://scripts/entities/components/identity_component.gd")
+const PickableComponentScript := preload("res://scripts/entities/components/pickable_component.gd")
+const SelectableComponentScript := preload("res://scripts/entities/components/selectable_component.gd")
+const HighlightableComponentScript := preload("res://scripts/entities/components/highlightable_component.gd")
+const InteractableComponentScript := preload("res://scripts/entities/components/interactable_component.gd")
 const HighlightControllerScript := preload("res://scripts/entities/highlight_controller.gd")
 const PickingControllerScript := preload("res://scripts/entities/picking_controller.gd")
 const SelectionControllerScript := preload("res://scripts/entities/selection_controller.gd")
@@ -179,11 +185,8 @@ func _verify_main_scene_integration() -> void:
 		return
 
 	var target := entities[0]
-	_expect(target.has_method("get_visual_node"), "generated building should expose get_visual_node")
-	var visual := target.call("get_visual_node") as Node
-	_expect(visual != null, "generated building should return one visual target")
-	_expect(visual.has_method("set_highlight_color"), "generated building visual should expose set_highlight_color")
-	_expect(visual.has_method("reset_highlight"), "generated building visual should expose reset_highlight")
+	var highlightable := CapabilityResolverScript.get_highlightable(target)
+	_expect(highlightable != null, "generated building should expose HighlightableComponent")
 
 	_expect(controller.set_highlight_input(target, &"debug_override", true).ok, "startup controller should set debug_override directly")
 	_expect(controller.get_resolved_highlight_state(target) == &"debug_override", "startup controller should resolve direct debug_override input")
@@ -196,15 +199,19 @@ func _verify_main_scene_integration() -> void:
 
 
 func _picking_result(target: Node) -> Dictionary:
+	var identity := CapabilityResolverScript.get_identity(target)
+	var pickable := CapabilityResolverScript.get_pickable(target)
+	var selectable := CapabilityResolverScript.get_selectable(target)
+	var interactable := CapabilityResolverScript.get_interactable(target)
 	return {
 		"has_target": true,
 		"target": target,
-		"entity_id": target.call("get_entity_id"),
-		"entity_type": target.call("get_entity_type"),
-		"display_name": target.call("get_display_name"),
-		"selectable": target.call("is_selectable"),
-		"interactable": target.call("is_interactable"),
-		"world_rect": target.call("get_world_rect"),
+		"entity_id": identity.call("get_entity_id"),
+		"entity_type": identity.call("get_entity_type"),
+		"display_name": identity.call("get_display_name"),
+		"selectable": selectable.call("is_selectable"),
+		"interactable": interactable.call("is_interactable"),
+		"world_rect": pickable.call("get_world_rect"),
 	}
 
 
@@ -237,27 +244,26 @@ class MockBuildingEntity:
 		_entity_id = entity_id
 		_display_name = display_name
 		add_child(visual)
-
-	func get_visual_node() -> Node2D:
-		return visual
-
-	func get_world_rect() -> Rect2:
-		return Rect2(Vector2.ZERO, Vector2(20, 20))
-
-	func get_entity_id() -> String:
-		return _entity_id
-
-	func get_entity_type() -> String:
-		return "building"
-
-	func get_display_name() -> String:
-		return _display_name
-
-	func is_selectable() -> bool:
-		return true
-
-	func is_interactable() -> bool:
-		return true
+		var identity := IdentityComponentScript.new()
+		identity.name = "IdentityComponent"
+		add_child(identity)
+		identity.configure(_entity_id, "building", _display_name)
+		var pickable := PickableComponentScript.new()
+		pickable.name = "PickableComponent"
+		add_child(pickable)
+		pickable.configure(Rect2(Vector2.ZERO, Vector2(20, 20)))
+		var selectable_component := SelectableComponentScript.new()
+		selectable_component.name = "SelectableComponent"
+		add_child(selectable_component)
+		selectable_component.configure(true)
+		var highlightable := HighlightableComponentScript.new()
+		highlightable.name = "HighlightableComponent"
+		add_child(highlightable)
+		highlightable.configure(visual)
+		var interactable_component := InteractableComponentScript.new()
+		interactable_component.name = "InteractableComponent"
+		add_child(interactable_component)
+		interactable_component.configure(true)
 
 
 class MissingVisualBuildingEntity:
@@ -267,24 +273,19 @@ class MissingVisualBuildingEntity:
 
 	func _init(entity_id: String) -> void:
 		_entity_id = entity_id
-
-	func get_visual_node() -> Node2D:
-		return null
-
-	func get_world_rect() -> Rect2:
-		return Rect2(Vector2.ZERO, Vector2(20, 20))
-
-	func get_entity_id() -> String:
-		return _entity_id
-
-	func get_entity_type() -> String:
-		return "building"
-
-	func get_display_name() -> String:
-		return "Missing Visual"
-
-	func is_selectable() -> bool:
-		return true
-
-	func is_interactable() -> bool:
-		return true
+		var identity := IdentityComponentScript.new()
+		identity.name = "IdentityComponent"
+		add_child(identity)
+		identity.configure(_entity_id, "building", "Missing Visual")
+		var pickable := PickableComponentScript.new()
+		pickable.name = "PickableComponent"
+		add_child(pickable)
+		pickable.configure(Rect2(Vector2.ZERO, Vector2(20, 20)))
+		var selectable_component := SelectableComponentScript.new()
+		selectable_component.name = "SelectableComponent"
+		add_child(selectable_component)
+		selectable_component.configure(true)
+		var interactable_component := InteractableComponentScript.new()
+		interactable_component.name = "InteractableComponent"
+		add_child(interactable_component)
+		interactable_component.configure(true)

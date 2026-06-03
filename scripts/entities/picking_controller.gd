@@ -3,6 +3,8 @@ extends Node
 
 signal hover_changed(snapshot: Dictionary)
 
+const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
+
 const EMPTY_PICKING_RESULT := {
 	"has_target": false,
 }
@@ -85,10 +87,10 @@ func get_hover_snapshot() -> Dictionary:
 func _pickable_entities_containing(world_point: Vector2) -> Array[Node]:
 	var matches: Array[Node] = []
 	for entity in _get_building_entities():
-		if not _is_pickable_building_entity(entity):
+		var pickable := CapabilityResolverScript.get_pickable(entity)
+		if pickable == null:
 			continue
-		var world_rect: Rect2 = entity.call("get_world_rect")
-		if world_rect.has_point(world_point):
+		if bool(pickable.call("contains_world_point", world_point)):
 			matches.append(entity)
 	return matches
 
@@ -112,12 +114,8 @@ func _get_building_entities() -> Array[Node]:
 
 func _is_pickable_building_entity(entity: Node) -> bool:
 	return entity != null \
-		and entity.has_method("get_world_rect") \
-		and entity.has_method("get_entity_id") \
-		and entity.has_method("get_entity_type") \
-		and entity.has_method("get_display_name") \
-		and entity.has_method("is_selectable") \
-		and entity.has_method("is_interactable")
+		and CapabilityResolverScript.get_pickable(entity) != null \
+		and CapabilityResolverScript.get_identity(entity) != null
 
 
 func _compare_pickable_entities(first: Node, second: Node) -> bool:
@@ -125,22 +123,29 @@ func _compare_pickable_entities(first: Node, second: Node) -> bool:
 	var second_index := second.get_index() if second != null else -1
 	if first_index != second_index:
 		return first_index < second_index
-	return String(first.call("get_entity_id")) < String(second.call("get_entity_id"))
+	return _get_entity_id(first) < _get_entity_id(second)
 
 
 func _build_picking_result(target: Node) -> Dictionary:
 	if target == null:
 		return EMPTY_PICKING_RESULT.duplicate(true)
 
+	var identity := CapabilityResolverScript.get_identity(target)
+	var pickable := CapabilityResolverScript.get_pickable(target)
+	var selectable := CapabilityResolverScript.get_selectable(target)
+	var interactable := CapabilityResolverScript.get_interactable(target)
+	if identity == null or pickable == null:
+		return EMPTY_PICKING_RESULT.duplicate(true)
+
 	return {
 		"has_target": true,
 		"target": target,
-		"entity_id": String(target.call("get_entity_id")),
-		"entity_type": String(target.call("get_entity_type")),
-		"display_name": String(target.call("get_display_name")),
-		"selectable": bool(target.call("is_selectable")),
-		"interactable": bool(target.call("is_interactable")),
-		"world_rect": target.call("get_world_rect"),
+		"entity_id": String(identity.call("get_entity_id")),
+		"entity_type": String(identity.call("get_entity_type")),
+		"display_name": String(identity.call("get_display_name")),
+		"selectable": selectable != null and bool(selectable.call("is_selectable")),
+		"interactable": interactable != null and bool(interactable.call("is_interactable")),
+		"world_rect": pickable.call("get_world_rect"),
 	}
 
 
@@ -149,6 +154,13 @@ func _refresh_hovered_target() -> void:
 		return
 	if not is_instance_valid(_hovered_target) or not _hovered_target.is_inside_tree() or not _is_pickable_building_entity(_hovered_target):
 		clear_hover()
+
+
+func _get_entity_id(entity: Node) -> String:
+	var identity := CapabilityResolverScript.get_identity(entity)
+	if identity == null:
+		return ""
+	return String(identity.call("get_entity_id"))
 
 
 func _disconnect_hovered_target() -> void:
