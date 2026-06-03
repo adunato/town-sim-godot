@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://bwp1sm7h7h3ua"]
+[gd_scene load_steps=11 format=3 uid="uid://bwp1sm7h7h3ua"]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_ojyr8"]
 [ext_resource type="Script" path="res://scripts/map/map_renderer.gd" id="2_4f5q0"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://scripts/entities/selection_controller.gd" id="5_42bns"]
 [ext_resource type="Script" path="res://scripts/entities/picking_controller.gd" id="6_u2c6u"]
 [ext_resource type="Script" path="res://scripts/entities/highlight_controller.gd" id="7_q4b4o"]
+[ext_resource type="Script" path="res://scripts/entities/proximity_controller.gd" id="8_vjlor"]
 
 [node name="Main" type="Node"]
 script = ExtResource("1_ojyr8")
@@ -31,6 +32,9 @@ script = ExtResource("5_42bns")
 
 [node name="HighlightController" type="Node" parent="World"]
 script = ExtResource("7_q4b4o")
+
+[node name="ProximityController" type="Node2D" parent="World"]
+script = ExtResource("8_vjlor")
 
 [node name="DebugOverlay" type="Node2D" parent="World"]
 script = ExtResource("2_abm7f")
