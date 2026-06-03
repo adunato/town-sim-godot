@@ -10,6 +10,7 @@ const BuildingDataRegistryScript := preload("res://scripts/buildings/building_da
 @onready var _picking_controller := $World/PickingController
 @onready var _selection_controller := $World/SelectionController
 @onready var _highlight_controller := $World/HighlightController
+@onready var _proximity_controller := $World/ProximityController
 @onready var _debug_readout := $UI/DebugReadout
 
 var _map_model: RefCounted
@@ -31,6 +32,7 @@ func _ready() -> void:
 	_configure_picking()
 	_configure_highlights()
 	_place_player_at_spawn()
+	_configure_proximity()
 	_configure_player_camera()
 	_debug_overlay.set_map_model(_map_model)
 	_debug_readout.set_seed(_map_model.seed)
@@ -64,6 +66,12 @@ func _configure_highlights() -> void:
 	var highlight_result: Dictionary = _highlight_controller.configure(_buildings, _selection_controller, _picking_controller)
 	if not highlight_result.ok:
 		push_error("Unable to configure highlights: %s" % highlight_result.error)
+
+
+func _configure_proximity() -> void:
+	var proximity_result: Dictionary = _proximity_controller.configure(_player, _buildings, _highlight_controller, _debug_overlay)
+	if not proximity_result.ok:
+		push_error("Unable to configure proximity: %s" % proximity_result.error)
 
 
 func _unhandled_input(event: InputEvent) -> void:

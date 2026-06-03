@@ -22,6 +22,7 @@ const COLOR_PROTECTED := Color(0.85, 0.25, 1.0, 0.62)
 const COLOR_FOOTPRINT := Color(1.0, 0.9, 0.1, 0.9)
 const COLOR_PLAYER := Color(0.1, 0.9, 1.0, 0.9)
 const COLOR_BUILDING_COLLISION := Color(1.0, 0.1, 0.1, 0.85)
+const COLOR_PROXIMITY_TARGET := Color(0.1, 0.9, 1.0, 0.70)
 const COLOR_HOVER := Color(1.0, 0.9, 0.1, 0.95)
 const COLOR_SELECTED := Color(1.0, 1.0, 1.0, 0.95)
 const COLOR_LABEL := Color(1.0, 1.0, 1.0, 0.95)
@@ -31,6 +32,7 @@ var current_mode := MODE_GRID
 var _is_enabled := false
 var _map_model: RefCounted
 var _mode_index := 0
+var _proximity_snapshot_source: Node
 
 
 func _ready() -> void:
@@ -47,6 +49,11 @@ func set_map_model(map_model: RefCounted) -> void:
 	_map_model = map_model
 	queue_redraw()
 	_emit_debug_state()
+
+
+func set_proximity_snapshot_source(source: Node) -> void:
+	_proximity_snapshot_source = source
+	queue_redraw()
 
 
 func is_overlay_enabled() -> bool:
@@ -125,6 +132,7 @@ func _draw_physics_mode() -> void:
 	_draw_collision_group("debug_player_collision", COLOR_PLAYER)
 	_draw_collision_group("debug_building_collision", COLOR_BUILDING_COLLISION)
 	_draw_proximity_ranges()
+	_draw_nearby_proximity_targets()
 
 
 func _draw_entities_mode() -> void:
@@ -223,12 +231,41 @@ func _draw_collision_shape(collision_shape: CollisionShape2D, color: Color) -> v
 
 
 func _draw_proximity_ranges() -> void:
+	var snapshot := _read_proximity_snapshot()
+	if not snapshot.is_empty():
+		var radius := float(snapshot.get("proximity_radius", 0.0))
+		var center: Vector2 = snapshot.get("player_world_position", Vector2.ZERO)
+		if radius > 0.0:
+			draw_arc(center, radius, 0.0, TAU, 64, COLOR_PLAYER, 2.0)
+		return
+
 	for node in get_tree().get_nodes_in_group("debug_proximity"):
 		var radius := _read_float(node, "proximity_radius", "get_proximity_radius")
 		if radius <= 0.0:
 			continue
 		var center := _read_position(node)
 		draw_arc(center, radius, 0.0, TAU, 64, COLOR_PLAYER, 2.0)
+
+
+func _draw_nearby_proximity_targets() -> void:
+	var snapshot := _read_proximity_snapshot()
+	if snapshot.is_empty():
+		return
+
+	var nearby_ids := _string_array_from_variant(snapshot.get("nearby_entity_ids", []))
+	if nearby_ids.is_empty():
+		return
+
+	for node in get_tree().get_nodes_in_group("debug_entity_labels"):
+		if not node is Node:
+			continue
+		var entity_id := _read_string(node, "entity_id", "get_entity_id")
+		if not nearby_ids.has(entity_id):
+			continue
+		if node.has_method("get_world_rect"):
+			draw_rect(node.call("get_world_rect"), COLOR_PROXIMITY_TARGET, false, 3.0)
+		else:
+			draw_arc(_read_position(node), 11.0, 0.0, TAU, 24, COLOR_PROXIMITY_TARGET, 3.0)
 
 
 func _draw_entity_labels() -> void:
@@ -320,6 +357,26 @@ func _read_entity_label(node: Node) -> String:
 	if entity_id.is_empty() and display_name.is_empty() and entity_type.is_empty():
 		return ""
 	return "%s | %s | %s" % [entity_id, display_name, entity_type]
+
+
+func _read_proximity_snapshot() -> Dictionary:
+	if _proximity_snapshot_source == null or not is_instance_valid(_proximity_snapshot_source):
+		return {}
+	if not _proximity_snapshot_source.has_method("get_proximity_snapshot"):
+		return {}
+	var snapshot: Variant = _proximity_snapshot_source.call("get_proximity_snapshot")
+	if typeof(snapshot) != TYPE_DICTIONARY:
+		return {}
+	return snapshot
+
+
+func _string_array_from_variant(value: Variant) -> Array[String]:
+	var result: Array[String] = []
+	if typeof(value) != TYPE_ARRAY:
+		return result
+	for item in value:
+		result.append(String(item))
+	return result
 
 
 func _read_string(node: Node, property_name: StringName, method_name: StringName) -> String:
