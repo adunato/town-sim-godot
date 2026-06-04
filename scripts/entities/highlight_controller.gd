@@ -58,50 +58,50 @@ const STATE_COLOURS := {
 	},
 }
 
-var _buildings_owner: Node
+var _entity_owner: Node
 var _selection_controller: Node
 var _picking_controller: Node
 var _diagnostics: Array[String] = []
-var _selected_building: Node
-var _hovered_building: Node
+var _selected_entity: Node
+var _hovered_entity: Node
 
 
-func configure(buildings_owner: Node, selection_controller: Node, picking_controller: Node) -> Dictionary:
-	if buildings_owner == null:
-		return _failure("HighlightController requires a buildings owner.")
+func configure(entity_owner: Node, selection_controller: Node, picking_controller: Node) -> Dictionary:
+	if entity_owner == null:
+		return _failure("HighlightController requires an entity owner.")
 	if selection_controller == null:
 		return _failure("HighlightController requires a selection controller.")
 	if picking_controller == null:
 		return _failure("HighlightController requires a picking controller.")
-	_buildings_owner = buildings_owner
+	_entity_owner = entity_owner
 	_selection_controller = selection_controller
 	_picking_controller = picking_controller
 	_diagnostics.clear()
-	_register_current_buildings()
+	_register_current_entities()
 	_connect_controller_signals()
 	_apply_selection_target(_selection_controller.call("get_selected_target") as Node)
 	_apply_hovered_target(_picking_controller.call("get_hovered_target") as Node)
 	return _success()
 
 
-func set_highlight_input(building: Node, input_flag: StringName, enabled: bool) -> Dictionary:
-	if building == null:
-		return _failure("HighlightController cannot set '%s' because building is null." % input_flag)
+func set_highlight_input(entity: Node, input_flag: StringName, enabled: bool) -> Dictionary:
+	if entity == null:
+		return _failure("HighlightController cannot set '%s' because entity is null." % input_flag)
 	if not INPUT_FLAGS.has(input_flag):
 		return _failure("HighlightController input flag '%s' is not approved." % input_flag)
 
-	var register_result := _ensure_registered(building)
+	var register_result := _ensure_registered(entity)
 	if not register_result.ok:
 		return register_result
 
-	var highlightable := building.get_node_or_null("HighlightableComponent")
+	var highlightable := entity.get_node_or_null("HighlightableComponent")
 	return highlightable.call("set_highlight_input", input_flag, enabled)
 
 
-func get_resolved_highlight_state(building: Node) -> StringName:
-	if building == null:
+func get_resolved_highlight_state(entity: Node) -> StringName:
+	if entity == null:
 		return STATE_DEFAULT
-	var highlightable := building.get_node_or_null("HighlightableComponent")
+	var highlightable := entity.get_node_or_null("HighlightableComponent")
 	if highlightable == null:
 		return STATE_DEFAULT
 	return highlightable.call("get_resolved_highlight_state")
@@ -118,19 +118,19 @@ func resolve_highlight_state(input_state: Dictionary) -> StringName:
 	return STATE_DEFAULT
 
 
-func _register_current_buildings() -> void:
-	for building in _get_building_entities():
-		_ensure_registered(building)
+func _register_current_entities() -> void:
+	for entity in _get_target_entities():
+		_ensure_registered(entity)
 
 
-func _ensure_registered(building: Node) -> Dictionary:
-	if building == null:
-		return _failure("HighlightController cannot register a null building.")
-	var highlightable := building.get_node_or_null("HighlightableComponent")
+func _ensure_registered(entity: Node) -> Dictionary:
+	if entity == null:
+		return _failure("HighlightController cannot register a null entity.")
+	var highlightable := entity.get_node_or_null("HighlightableComponent")
 	if highlightable == null:
-		return _diagnose("HighlightController target '%s' has no HighlightableComponent." % _describe_building(building))
-	if not building.tree_exiting.is_connected(_on_registered_building_tree_exiting.bind(building)):
-		building.tree_exiting.connect(_on_registered_building_tree_exiting.bind(building))
+		return _diagnose("HighlightController target '%s' has no HighlightableComponent." % _describe_entity(entity))
+	if not entity.tree_exiting.is_connected(_on_registered_entity_tree_exiting.bind(entity)):
+		entity.tree_exiting.connect(_on_registered_entity_tree_exiting.bind(entity))
 	return _success()
 
 
@@ -152,58 +152,58 @@ func _on_hover_changed(_snapshot: Dictionary) -> void:
 
 
 func _apply_selection_target(next_selected: Node) -> void:
-	if next_selected == _selected_building:
+	if next_selected == _selected_entity:
 		return
-	if _selected_building != null and is_instance_valid(_selected_building):
-		set_highlight_input(_selected_building, INPUT_SELECTED, false)
-	_selected_building = next_selected
-	if _selected_building != null:
-		set_highlight_input(_selected_building, INPUT_SELECTED, true)
+	if _selected_entity != null and is_instance_valid(_selected_entity):
+		set_highlight_input(_selected_entity, INPUT_SELECTED, false)
+	_selected_entity = next_selected
+	if _selected_entity != null:
+		set_highlight_input(_selected_entity, INPUT_SELECTED, true)
 
 
 func _apply_hovered_target(next_hovered: Node) -> void:
-	if next_hovered == _hovered_building:
+	if next_hovered == _hovered_entity:
 		return
-	if _hovered_building != null and is_instance_valid(_hovered_building):
-		set_highlight_input(_hovered_building, INPUT_HOVERED, false)
-	_hovered_building = next_hovered
-	if _hovered_building != null:
-		set_highlight_input(_hovered_building, INPUT_HOVERED, true)
+	if _hovered_entity != null and is_instance_valid(_hovered_entity):
+		set_highlight_input(_hovered_entity, INPUT_HOVERED, false)
+	_hovered_entity = next_hovered
+	if _hovered_entity != null:
+		set_highlight_input(_hovered_entity, INPUT_HOVERED, true)
 
 
-func _get_building_entities() -> Array[Node]:
-	if _buildings_owner == null:
+func _get_target_entities() -> Array[Node]:
+	if _entity_owner == null:
 		return []
-	if _buildings_owner.has_method("get_building_entities"):
+	if _entity_owner.has_method("get_entity_targets"):
 		var owner_entities: Array[Node] = []
-		for entity in _buildings_owner.call("get_building_entities"):
+		for entity in _entity_owner.call("get_entity_targets"):
 			if entity is Node:
 				owner_entities.append(entity)
 		return owner_entities
 
 	var child_entities: Array[Node] = []
-	for child in _buildings_owner.get_children():
+	for child in _entity_owner.get_children():
 		if child is Node:
 			child_entities.append(child)
 	return child_entities
 
 
-func _on_registered_building_tree_exiting(building: Node) -> void:
-	if building == _selected_building:
-		_selected_building = null
-	if building == _hovered_building:
-		_hovered_building = null
+func _on_registered_entity_tree_exiting(entity: Node) -> void:
+	if entity == _selected_entity:
+		_selected_entity = null
+	if entity == _hovered_entity:
+		_hovered_entity = null
 
 
-func _describe_building(building: Node) -> String:
-	if building == null:
+func _describe_entity(entity: Node) -> String:
+	if entity == null:
 		return "<null>"
-	var identity := building.get_node_or_null("IdentityComponent")
+	var identity := entity.get_node_or_null("IdentityComponent")
 	if identity != null:
 		var entity_id := String(identity.call("get_entity_id"))
 		if not entity_id.is_empty():
 			return entity_id
-	return building.name
+	return entity.name
 
 
 func _diagnose(message: String) -> Dictionary:

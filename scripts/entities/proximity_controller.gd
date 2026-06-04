@@ -6,9 +6,9 @@ signal proximity_changed(snapshot: Dictionary)
 @export var proximity_radius := 82.0
 
 var _player: Node
-var _buildings_owner: Node
+var _entity_owner: Node
 var _highlight_controller: Node
-var _nearby_buildings: Dictionary = {}
+var _nearby_entities: Dictionary = {}
 var _last_entered_entity_ids: Array[String] = []
 var _last_left_entity_ids: Array[String] = []
 var _is_configured := false
@@ -23,15 +23,13 @@ func _physics_process(_delta: float) -> void:
 	_update_proximity_state()
 
 
-func configure(player: Node, buildings_owner: Node, highlight_controller: Node, debug_overlay: Node = null) -> Dictionary:
+func configure(player: Node, entity_owner: Node, highlight_controller: Node, debug_overlay: Node = null) -> Dictionary:
 	if player == null:
 		return _failure("ProximityController requires a player.")
 	if not player.has_method("get_world_position") and not player is Node2D:
 		return _failure("ProximityController player must expose get_world_position or be a Node2D.")
-	if buildings_owner == null:
-		return _failure("ProximityController requires a buildings owner.")
-	if not buildings_owner.has_method("get_building_entities"):
-		return _failure("ProximityController buildings owner must expose get_building_entities.")
+	if entity_owner == null:
+		return _failure("ProximityController requires an entity owner.")
 	if highlight_controller == null:
 		return _failure("ProximityController requires a highlight controller.")
 	if not highlight_controller.has_method("set_highlight_input"):
@@ -40,9 +38,9 @@ func configure(player: Node, buildings_owner: Node, highlight_controller: Node, 
 		return _failure("ProximityController proximity_radius must be greater than zero.")
 
 	_player = player
-	_buildings_owner = buildings_owner
+	_entity_owner = entity_owner
 	_highlight_controller = highlight_controller
-	_nearby_buildings.clear()
+	_nearby_entities.clear()
 	_last_entered_entity_ids.clear()
 	_last_left_entity_ids.clear()
 	_is_configured = true
@@ -59,10 +57,10 @@ func is_configured() -> bool:
 	return _is_configured
 
 
-func is_entity_nearby(building: Node) -> bool:
-	if building == null:
+func is_entity_nearby(entity: Node) -> bool:
+	if entity == null:
 		return false
-	return bool(_nearby_buildings.get(building, false))
+	return bool(_nearby_entities.get(entity, false))
 
 
 func get_proximity_snapshot() -> Dictionary:
@@ -85,10 +83,10 @@ func get_last_left_entity_ids() -> Array[String]:
 	return _last_left_entity_ids.duplicate()
 
 
-func get_proximity_distance_to_rect(player_position: Vector2, building_rect: Rect2) -> float:
+func get_proximity_distance_to_rect(player_position: Vector2, entity_rect: Rect2) -> float:
 	var nearest_point := Vector2(
-		clampf(player_position.x, building_rect.position.x, building_rect.position.x + building_rect.size.x),
-		clampf(player_position.y, building_rect.position.y, building_rect.position.y + building_rect.size.y)
+		clampf(player_position.x, entity_rect.position.x, entity_rect.position.x + entity_rect.size.x),
+		clampf(player_position.y, entity_rect.position.y, entity_rect.position.y + entity_rect.size.y)
 	)
 	return player_position.distance_to(nearest_point)
 
@@ -101,34 +99,34 @@ func _update_proximity_state() -> void:
 	if not _is_configured:
 		return
 
-	var previous_nearby := _nearby_buildings.duplicate()
+	var previous_nearby := _nearby_entities.duplicate()
 	var next_nearby: Dictionary = {}
 	var player_position := _get_player_world_position()
 	global_position = player_position
 
-	for building in _get_building_entities():
-		if not _building_has_required_contract(building):
+	for entity in _get_target_entities():
+		if not _entity_has_required_contract(entity):
 			continue
-		var proximity_target := building.get_node_or_null("ProximityTargetComponent")
+		var proximity_target := entity.get_node_or_null("ProximityTargetComponent")
 		var world_rect: Rect2 = proximity_target.call("get_proximity_rect")
 		var distance := get_proximity_distance_to_rect(player_position, world_rect)
 		if distance <= proximity_radius:
-			next_nearby[building] = true
+			next_nearby[entity] = true
 
 	_last_entered_entity_ids.clear()
 	_last_left_entity_ids.clear()
 
-	for building in next_nearby.keys():
-		if not previous_nearby.has(building):
-			_last_entered_entity_ids.append(_get_entity_id(building))
-			_set_nearby_highlight(building, true)
+	for entity in next_nearby.keys():
+		if not previous_nearby.has(entity):
+			_last_entered_entity_ids.append(_get_entity_id(entity))
+			_set_nearby_highlight(entity, true)
 
-	for building in previous_nearby.keys():
-		if not next_nearby.has(building) and is_instance_valid(building):
-			_last_left_entity_ids.append(_get_entity_id(building))
-			_set_nearby_highlight(building, false)
+	for entity in previous_nearby.keys():
+		if not next_nearby.has(entity) and is_instance_valid(entity):
+			_last_left_entity_ids.append(_get_entity_id(entity))
+			_set_nearby_highlight(entity, false)
 
-	_nearby_buildings = next_nearby
+	_nearby_entities = next_nearby
 	if not _last_entered_entity_ids.is_empty() or not _last_left_entity_ids.is_empty():
 		proximity_changed.emit(get_proximity_snapshot())
 
@@ -143,44 +141,51 @@ func _get_player_world_position() -> Vector2:
 	return Vector2.ZERO
 
 
-func _get_building_entities() -> Array[Node]:
-	if _buildings_owner == null:
+func _get_target_entities() -> Array[Node]:
+	if _entity_owner == null:
 		return []
+	if _entity_owner.has_method("get_entity_targets"):
+		var owner_entities: Array[Node] = []
+		for entity in _entity_owner.call("get_entity_targets"):
+			if entity is Node:
+				owner_entities.append(entity)
+		return owner_entities
+
 	var entities: Array[Node] = []
-	for entity in _buildings_owner.call("get_building_entities"):
-		if entity is Node:
-			entities.append(entity)
+	for child in _entity_owner.get_children():
+		if child is Node:
+			entities.append(child)
 	return entities
 
 
-func _building_has_required_contract(building: Node) -> bool:
-	return building != null \
-		and building.get_node_or_null("ProximityTargetComponent") != null \
-		and building.get_node_or_null("IdentityComponent") != null
+func _entity_has_required_contract(entity: Node) -> bool:
+	return entity != null \
+		and entity.get_node_or_null("ProximityTargetComponent") != null \
+		and entity.get_node_or_null("IdentityComponent") != null
 
 
-func _set_nearby_highlight(building: Node, enabled: bool) -> void:
+func _set_nearby_highlight(entity: Node, enabled: bool) -> void:
 	if _highlight_controller == null or not is_instance_valid(_highlight_controller):
 		return
-	_highlight_controller.call("set_highlight_input", building, &"nearby", enabled)
+	_highlight_controller.call("set_highlight_input", entity, &"nearby", enabled)
 
 
 func _get_nearby_entity_ids() -> Array[String]:
 	var ids: Array[String] = []
-	for building in _nearby_buildings.keys():
-		if is_instance_valid(building):
-			ids.append(_get_entity_id(building))
+	for entity in _nearby_entities.keys():
+		if is_instance_valid(entity):
+			ids.append(_get_entity_id(entity))
 	ids.sort()
 	return ids
 
 
-func _get_entity_id(building: Node) -> String:
-	var identity := building.get_node_or_null("IdentityComponent")
+func _get_entity_id(entity: Node) -> String:
+	if entity == null:
+		return ""
+	var identity := entity.get_node_or_null("IdentityComponent")
 	if identity != null:
 		return String(identity.call("get_entity_id"))
-	if building != null:
-		return building.name
-	return ""
+	return entity.name
 
 
 func _success(extra: Dictionary = {}) -> Dictionary:

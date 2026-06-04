@@ -73,8 +73,10 @@ func _verify_entity_contract(fixture: Dictionary) -> void:
 	var spawner: Node = fixture.spawner
 	var instances: Array[Dictionary] = fixture.instances
 	var entities: Array[Node] = spawner.call("get_building_entities")
+	var entity_targets: Array[Node] = spawner.call("get_entity_targets")
 
 	_expect(entities.size() == instances.size(), "expected %d building entities, got %d" % [instances.size(), entities.size()])
+	_expect(entity_targets == entities, "building spawner should expose generated buildings through generic entity targets")
 
 	var seen_ids: Dictionary = {}
 	for instance in instances:

@@ -55,7 +55,7 @@ func _verify_controller_state_and_highlight_wiring() -> void:
 	await process_frame
 
 	var configure_result: Dictionary = controller.configure(player, buildings, highlight)
-	_expect(configure_result.ok, "ProximityController should configure with player, buildings, and highlight controller")
+	_expect(configure_result.ok, "ProximityController should configure with player, entity owner, and highlight controller")
 	_expect(not controller.is_entity_nearby(building), "building should start outside range")
 	_expect(controller.get_last_entered_entity_ids().is_empty(), "outside startup should not record an enter transition")
 
@@ -198,6 +198,9 @@ class MockBuildingsOwner:
 		add_child(building)
 
 	func get_building_entities() -> Array[Node]:
+		return get_entity_targets()
+
+	func get_entity_targets() -> Array[Node]:
 		var result: Array[Node] = []
 		for building in _buildings:
 			if is_instance_valid(building):
