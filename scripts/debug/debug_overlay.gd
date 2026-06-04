@@ -3,8 +3,6 @@ extends Node2D
 
 signal debug_state_changed(is_enabled: bool, mode: String, legend_entries: PackedStringArray)
 
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
-
 const MODE_GRID := "grid"
 const MODE_CELLS := "cells"
 const MODE_PHYSICS := "physics"
@@ -350,7 +348,7 @@ func _read_position(node: Node) -> Vector2:
 
 
 func _read_entity_label(node: Node) -> String:
-	var identity := CapabilityResolverScript.get_identity(node)
+	var identity := node.get_node_or_null("IdentityComponent")
 	var entity_id := String(identity.call("get_entity_id")) if identity != null else _read_string(node, "entity_id", "get_entity_id")
 	var display_name := String(identity.call("get_display_name")) if identity != null else _read_string(node, "display_name", "get_display_name")
 	var entity_type := String(identity.call("get_entity_type")) if identity != null else _read_string(node, "entity_type", "get_entity_type")

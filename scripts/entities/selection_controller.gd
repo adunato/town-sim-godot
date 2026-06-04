@@ -3,8 +3,6 @@ extends Node
 
 signal selection_changed(snapshot: Dictionary)
 
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
-
 const EMPTY_SELECTION_SNAPSHOT := {
 	"has_target": false,
 }
@@ -47,7 +45,7 @@ func select_target(target: Node) -> Dictionary:
 	if _selected_component != null:
 		_selected_component.call("deselect")
 	_selected_target = target
-	_selected_component = CapabilityResolverScript.get_selectable(target)
+	_selected_component = target.get_node_or_null("SelectableComponent")
 	_selected_component.call("select")
 	if not _selected_target.tree_exiting.is_connected(_on_selected_target_tree_exiting):
 		_selected_target.tree_exiting.connect(_on_selected_target_tree_exiting)
@@ -122,32 +120,32 @@ func _is_selectable_target(target: Node) -> bool:
 
 func _has_required_entity_contract(target: Node) -> bool:
 	return target != null \
-		and CapabilityResolverScript.get_identity(target) != null \
-		and CapabilityResolverScript.get_selectable(target) != null
+		and target.get_node_or_null("IdentityComponent") != null \
+		and target.get_node_or_null("SelectableComponent") != null
 
 
 func _target_reports_selectable(target: Node) -> bool:
-	var selectable := CapabilityResolverScript.get_selectable(target)
+	var selectable := target.get_node_or_null("SelectableComponent")
 	return selectable != null and bool(selectable.call("can_select"))
 
 
 func _target_reports_interactable(target: Node) -> bool:
-	var interactable := CapabilityResolverScript.get_interactable(target)
+	var interactable := target.get_node_or_null("InteractableComponent")
 	return interactable != null and bool(interactable.call("is_interactable"))
 
 
 func _get_entity_id(target: Node) -> String:
-	var identity := CapabilityResolverScript.get_identity(target)
+	var identity := target.get_node_or_null("IdentityComponent")
 	return String(identity.call("get_entity_id")) if identity != null else ""
 
 
 func _get_entity_type(target: Node) -> String:
-	var identity := CapabilityResolverScript.get_identity(target)
+	var identity := target.get_node_or_null("IdentityComponent")
 	return String(identity.call("get_entity_type")) if identity != null else ""
 
 
 func _get_display_name(target: Node) -> String:
-	var identity := CapabilityResolverScript.get_identity(target)
+	var identity := target.get_node_or_null("IdentityComponent")
 	return String(identity.call("get_display_name")) if identity != null else ""
 
 

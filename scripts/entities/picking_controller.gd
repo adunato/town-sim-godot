@@ -3,8 +3,6 @@ extends Node
 
 signal hover_changed(snapshot: Dictionary)
 
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
-
 const EMPTY_PICKING_RESULT := {
 	"has_target": false,
 }
@@ -87,7 +85,7 @@ func get_hover_snapshot() -> Dictionary:
 func _pickable_entities_containing(world_point: Vector2) -> Array[Node]:
 	var matches: Array[Node] = []
 	for entity in _get_building_entities():
-		var pickable := CapabilityResolverScript.get_pickable(entity)
+		var pickable := entity.get_node_or_null("PickableComponent")
 		if pickable == null:
 			continue
 		if bool(pickable.call("contains_world_point", world_point)):
@@ -114,8 +112,8 @@ func _get_building_entities() -> Array[Node]:
 
 func _is_pickable_building_entity(entity: Node) -> bool:
 	return entity != null \
-		and CapabilityResolverScript.get_pickable(entity) != null \
-		and CapabilityResolverScript.get_identity(entity) != null
+		and entity.get_node_or_null("PickableComponent") != null \
+		and entity.get_node_or_null("IdentityComponent") != null
 
 
 func _compare_pickable_entities(first: Node, second: Node) -> bool:
@@ -130,10 +128,10 @@ func _build_picking_result(target: Node) -> Dictionary:
 	if target == null:
 		return EMPTY_PICKING_RESULT.duplicate(true)
 
-	var identity := CapabilityResolverScript.get_identity(target)
-	var pickable := CapabilityResolverScript.get_pickable(target)
-	var selectable := CapabilityResolverScript.get_selectable(target)
-	var interactable := CapabilityResolverScript.get_interactable(target)
+	var identity := target.get_node_or_null("IdentityComponent")
+	var pickable := target.get_node_or_null("PickableComponent")
+	var selectable := target.get_node_or_null("SelectableComponent")
+	var interactable := target.get_node_or_null("InteractableComponent")
 	if identity == null or pickable == null:
 		return EMPTY_PICKING_RESULT.duplicate(true)
 
@@ -157,7 +155,7 @@ func _refresh_hovered_target() -> void:
 
 
 func _get_entity_id(entity: Node) -> String:
-	var identity := CapabilityResolverScript.get_identity(entity)
+	var identity := entity.get_node_or_null("IdentityComponent")
 	if identity == null:
 		return ""
 	return String(identity.call("get_entity_id"))
