@@ -13,20 +13,21 @@ const MODE_ALL := "all"
 const MODES: PackedStringArray = [MODE_GRID, MODE_CELLS, MODE_PHYSICS, MODE_ENTITIES, MODE_ALL]
 const DEBUG_CELL_STATE_LAYER_NAME := "DebugCellStateTileMapLayer"
 const DEBUG_TILESET_PATH := "res://resources/tilesets/debug_cell_states.tres"
-const DEBUG_TILE_PATHS: PackedStringArray = [
-	"res://assets/tiles/debug/walkable.png",
-	"res://assets/tiles/debug/blocked.png",
-	"res://assets/tiles/debug/occupied.png",
-	"res://assets/tiles/debug/reserved.png",
-	"res://assets/tiles/debug/protected.png",
+const DEBUG_ATLAS_PATH := "res://assets/tiles/debug/debug_cell_states_atlas.png"
+const DEBUG_TILE_SOURCE := 0
+const DEBUG_TILE_WALKABLE := Vector2i(0, 0)
+const DEBUG_TILE_BLOCKED := Vector2i(1, 0)
+const DEBUG_TILE_OCCUPIED := Vector2i(2, 0)
+const DEBUG_TILE_RESERVED := Vector2i(3, 0)
+const DEBUG_TILE_PROTECTED := Vector2i(4, 0)
+const DEBUG_TILE_COORDS: Array[Vector2i] = [
+	DEBUG_TILE_WALKABLE,
+	DEBUG_TILE_BLOCKED,
+	DEBUG_TILE_OCCUPIED,
+	DEBUG_TILE_RESERVED,
+	DEBUG_TILE_PROTECTED,
 ]
-const DEBUG_TILE_WALKABLE := 0
-const DEBUG_TILE_BLOCKED := 1
-const DEBUG_TILE_OCCUPIED := 2
-const DEBUG_TILE_RESERVED := 3
-const DEBUG_TILE_PROTECTED := 4
 const TILE_SIZE := 32
-const TILE_ATLAS_COORDS := Vector2i.ZERO
 
 const COLOR_BOUNDARY := Color(1.0, 1.0, 1.0, 0.95)
 const COLOR_GRID := Color(1.0, 1.0, 1.0, 0.30)
@@ -173,6 +174,12 @@ func get_debug_cell_state_layer() -> TileMapLayer:
 func get_debug_cell_state_tile_source_id(cell: Vector2i) -> int:
 	if _map_model == null or not _map_model.is_cell_in_bounds(cell):
 		return -1
+	return DEBUG_TILE_SOURCE
+
+
+func get_debug_cell_state_tile_atlas_coords(cell: Vector2i) -> Vector2i:
+	if _map_model == null or not _map_model.is_cell_in_bounds(cell):
+		return Vector2i(-1, -1)
 	if _map_model.is_protected(cell):
 		return DEBUG_TILE_PROTECTED
 	if _map_model.is_reserved(cell):
@@ -183,7 +190,7 @@ func get_debug_cell_state_tile_source_id(cell: Vector2i) -> int:
 		return DEBUG_TILE_BLOCKED
 	if _map_model.is_walkable(cell):
 		return DEBUG_TILE_WALKABLE
-	return -1
+	return Vector2i(-1, -1)
 
 
 func get_populated_debug_cell_state_tile_count() -> int:
@@ -245,21 +252,21 @@ func _get_debug_tile_set() -> TileSet:
 
 	_debug_tile_set = TileSet.new()
 	_debug_tile_set.tile_size = Vector2i(TILE_SIZE, TILE_SIZE)
-	for source_id in range(DEBUG_TILE_PATHS.size()):
-		_debug_tile_set.add_source(_build_atlas_source(DEBUG_TILE_PATHS[source_id]), source_id)
+	_debug_tile_set.add_source(_build_atlas_source(DEBUG_ATLAS_PATH, DEBUG_TILE_COORDS), DEBUG_TILE_SOURCE)
 	return _debug_tile_set
 
 
-func _build_atlas_source(path: String) -> TileSetAtlasSource:
+func _build_atlas_source(path: String, atlas_coords: Array[Vector2i]) -> TileSetAtlasSource:
 	var image := Image.new()
 	var load_result := image.load(path)
 	if load_result != OK:
-		push_error("DebugOverlay failed to load debug tile image '%s': %s" % [path, error_string(load_result)])
+		push_error("DebugOverlay failed to load debug tile atlas '%s': %s" % [path, error_string(load_result)])
 	var texture := ImageTexture.create_from_image(image)
 	var source := TileSetAtlasSource.new()
 	source.texture = texture
 	source.texture_region_size = Vector2i(TILE_SIZE, TILE_SIZE)
-	source.create_tile(TILE_ATLAS_COORDS)
+	for coords in atlas_coords:
+		source.create_tile(coords)
 	return source
 
 
@@ -274,9 +281,9 @@ func _populate_debug_cell_state_layer() -> void:
 	for y in range(_map_model.grid_height):
 		for x in range(_map_model.grid_width):
 			var cell := Vector2i(x, y)
-			var source_id := get_debug_cell_state_tile_source_id(cell)
-			if source_id >= 0:
-				_debug_cell_state_layer.set_cell(cell, source_id, TILE_ATLAS_COORDS)
+			var atlas_coords := get_debug_cell_state_tile_atlas_coords(cell)
+			if atlas_coords.x >= 0:
+				_debug_cell_state_layer.set_cell(cell, DEBUG_TILE_SOURCE, atlas_coords)
 	_update_debug_cell_state_layer_visibility()
 
 

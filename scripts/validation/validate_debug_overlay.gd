@@ -108,15 +108,20 @@ func _verify_fixture_scene_contracts() -> void:
 
 func _verify_debug_cell_state_mapping(overlay: Node, model: RefCounted) -> void:
 	var spawn_cell: Vector2i = model.player_spawn_cell
-	_expect(overlay.call("get_debug_cell_state_tile_source_id", spawn_cell) == 4, "protected spawn cell should use protected debug tile source")
-	_expect(overlay.call("get_debug_cell_state_layer").get_cell_source_id(spawn_cell) == 4, "debug cell-state layer should place protected tile at spawn cell")
-	_expect(overlay.call("get_debug_cell_state_tile_source_id", Vector2i.ZERO) == 0, "default walkable cell should use walkable debug tile source")
+	_expect(overlay.call("get_debug_cell_state_tile_source_id", spawn_cell) == 0, "protected spawn cell should use the shared debug atlas source")
+	_expect(overlay.call("get_debug_cell_state_tile_atlas_coords", spawn_cell) == Vector2i(4, 0), "protected spawn cell should use protected debug atlas tile")
+	_expect(overlay.call("get_debug_cell_state_layer").get_cell_source_id(spawn_cell) == 0, "debug cell-state layer should place shared source at spawn cell")
+	_expect(overlay.call("get_debug_cell_state_layer").get_cell_atlas_coords(spawn_cell) == Vector2i(4, 0), "debug cell-state layer should place protected atlas tile at spawn cell")
+	_expect(overlay.call("get_debug_cell_state_tile_source_id", Vector2i.ZERO) == 0, "default walkable cell should use shared debug atlas source")
+	_expect(overlay.call("get_debug_cell_state_tile_atlas_coords", Vector2i.ZERO) == Vector2i(0, 0), "default walkable cell should use walkable debug atlas tile")
 	_expect(overlay.call("get_debug_cell_state_layer").get_cell_source_id(Vector2i.ZERO) == 0, "debug cell-state layer should place walkable tile at default cell")
 	var reserve_result: Dictionary = model.reserve_rect(Vector2i(2, 2), Vector2i.ONE, "blocked")
 	_expect(reserve_result.ok, "debug validation should reserve a blocked sample cell: %s" % reserve_result.get("error", ""))
 	overlay.call("refresh_debug_cell_state_tiles")
-	_expect(overlay.call("get_debug_cell_state_tile_source_id", Vector2i(2, 2)) == 1, "blocked sample cell should use blocked debug tile source")
-	_expect(overlay.call("get_debug_cell_state_layer").get_cell_source_id(Vector2i(2, 2)) == 1, "debug cell-state layer should place blocked tile at sample cell")
+	_expect(overlay.call("get_debug_cell_state_tile_source_id", Vector2i(2, 2)) == 0, "blocked sample cell should use the shared debug atlas source")
+	_expect(overlay.call("get_debug_cell_state_tile_atlas_coords", Vector2i(2, 2)) == Vector2i(1, 0), "blocked sample cell should use blocked debug atlas tile")
+	_expect(overlay.call("get_debug_cell_state_layer").get_cell_source_id(Vector2i(2, 2)) == 0, "debug cell-state layer should place shared source at sample cell")
+	_expect(overlay.call("get_debug_cell_state_layer").get_cell_atlas_coords(Vector2i(2, 2)) == Vector2i(1, 0), "debug cell-state layer should place blocked atlas tile at sample cell")
 
 
 func _legend_contains(entries: PackedStringArray, fragment: String) -> bool:

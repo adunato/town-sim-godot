@@ -8,14 +8,11 @@ const ProceduralBuildingPlacerScript := preload("res://scripts/buildings/procedu
 const DEFAULT_CONFIG_PATH := GridMapModelScript.DEFAULT_CONFIG_PATH
 const TERRAIN_LAYER_NAME := "TerrainTileMapLayer"
 const PLAY_TILESET_PATH := "res://resources/tilesets/play_cells.tres"
-const PLAY_TILE_PATHS: PackedStringArray = [
-	"res://assets/tiles/play/grass_a.png",
-	"res://assets/tiles/play/grass_b.png",
-]
-const PLAY_TILE_SOURCE_A := 0
-const PLAY_TILE_SOURCE_B := 1
+const PLAY_ATLAS_PATH := "res://assets/tiles/play/play_cells_atlas.png"
+const PLAY_TILE_SOURCE := 0
+const PLAY_TILE_ATLAS_A := Vector2i(0, 0)
+const PLAY_TILE_ATLAS_B := Vector2i(1, 0)
 const TILE_SIZE := 32
-const TILE_ATLAS_COORDS := Vector2i.ZERO
 const CELL_FILL_A := Color(0.55, 0.78, 0.42, 1.0)
 const CELL_FILL_B := Color(0.51, 0.75, 0.39, 1.0)
 const CELL_BORDER := Color(0.27, 0.48, 0.24, 0.28)
@@ -145,7 +142,11 @@ func get_terrain_layer() -> TileMapLayer:
 
 
 func get_terrain_tile_source_id(cell: Vector2i) -> int:
-	return PLAY_TILE_SOURCE_A if (cell.x + cell.y) % 2 == 0 else PLAY_TILE_SOURCE_B
+	return PLAY_TILE_SOURCE
+
+
+func get_terrain_tile_atlas_coords(cell: Vector2i) -> Vector2i:
+	return PLAY_TILE_ATLAS_A if (cell.x + cell.y) % 2 == 0 else PLAY_TILE_ATLAS_B
 
 
 func get_populated_terrain_tile_count() -> int:
@@ -154,11 +155,7 @@ func get_populated_terrain_tile_count() -> int:
 
 
 func _draw() -> void:
-	if _map_model == null:
-		return
-
-	_draw_grid_lines()
-	_draw_map_boundary()
+	pass
 
 
 func _ensure_terrain_layer() -> void:
@@ -180,21 +177,21 @@ func _get_play_tile_set() -> TileSet:
 
 	_play_tile_set = TileSet.new()
 	_play_tile_set.tile_size = Vector2i(TILE_SIZE, TILE_SIZE)
-	for source_id in range(PLAY_TILE_PATHS.size()):
-		_play_tile_set.add_source(_build_atlas_source(PLAY_TILE_PATHS[source_id]), source_id)
+	_play_tile_set.add_source(_build_atlas_source(PLAY_ATLAS_PATH, [PLAY_TILE_ATLAS_A, PLAY_TILE_ATLAS_B]), PLAY_TILE_SOURCE)
 	return _play_tile_set
 
 
-func _build_atlas_source(path: String) -> TileSetAtlasSource:
+func _build_atlas_source(path: String, atlas_coords: Array[Vector2i]) -> TileSetAtlasSource:
 	var image := Image.new()
 	var load_result := image.load(path)
 	if load_result != OK:
-		push_error("MapRenderer failed to load play tile image '%s': %s" % [path, error_string(load_result)])
+		push_error("MapRenderer failed to load play tile atlas '%s': %s" % [path, error_string(load_result)])
 	var texture := ImageTexture.create_from_image(image)
 	var source := TileSetAtlasSource.new()
 	source.texture = texture
 	source.texture_region_size = Vector2i(TILE_SIZE, TILE_SIZE)
-	source.create_tile(TILE_ATLAS_COORDS)
+	for coords in atlas_coords:
+		source.create_tile(coords)
 	return source
 
 
@@ -208,7 +205,7 @@ func _populate_terrain_layer() -> void:
 	for y in range(_map_model.grid_height):
 		for x in range(_map_model.grid_width):
 			var cell := Vector2i(x, y)
-			_terrain_layer.set_cell(cell, get_terrain_tile_source_id(cell), TILE_ATLAS_COORDS)
+			_terrain_layer.set_cell(cell, PLAY_TILE_SOURCE, get_terrain_tile_atlas_coords(cell))
 
 
 func _generate_buildings() -> void:
@@ -238,21 +235,6 @@ func _generate_buildings() -> void:
 
 	for instance in placement_result.instances:
 		_building_instances.append(instance.duplicate(true))
-
-
-func _draw_grid_lines() -> void:
-	var width := float(_map_model.grid_width * _map_model.cell_size)
-	var height := float(_map_model.grid_height * _map_model.cell_size)
-	for x in range(_map_model.grid_width + 1):
-		var column_x: float = _map_model.origin.x + float(x * _map_model.cell_size)
-		draw_line(Vector2(column_x, _map_model.origin.y), Vector2(column_x, _map_model.origin.y + height), CELL_BORDER, CELL_BORDER_WIDTH)
-	for y in range(_map_model.grid_height + 1):
-		var row_y: float = _map_model.origin.y + float(y * _map_model.cell_size)
-		draw_line(Vector2(_map_model.origin.x, row_y), Vector2(_map_model.origin.x + width, row_y), CELL_BORDER, CELL_BORDER_WIDTH)
-
-
-func _draw_map_boundary() -> void:
-	draw_rect(get_map_bounds(), MAP_BOUNDARY, false, MAP_BOUNDARY_WIDTH)
 
 
 func _vector2i_from_dictionary(value: Dictionary) -> Vector2i:

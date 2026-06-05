@@ -1,19 +1,13 @@
-[gd_resource type="TileSet" load_steps=5 format=3]
+[gd_resource type="TileSet" load_steps=3 format=3]
 
-[ext_resource type="Texture2D" path="res://assets/tiles/play/grass_a.png" id="1_grass_a"]
-[ext_resource type="Texture2D" path="res://assets/tiles/play/grass_b.png" id="2_grass_b"]
+[ext_resource type="Texture2D" path="res://assets/tiles/play/play_cells_atlas.png" id="1_atlas"]
 
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_grass_a"]
-texture = ExtResource("1_grass_a")
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_atlas"]
+texture = ExtResource("1_atlas")
 texture_region_size = Vector2i(32, 32)
 0:0/0 = 0
-
-[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_grass_b"]
-texture = ExtResource("2_grass_b")
-texture_region_size = Vector2i(32, 32)
-0:0/0 = 0
+1:0/0 = 0
 
 [resource]
 tile_size = Vector2i(32, 32)
-sources/0 = SubResource("TileSetAtlasSource_grass_a")
-sources/1 = SubResource("TileSetAtlasSource_grass_b")
+sources/0 = SubResource("TileSetAtlasSource_atlas")

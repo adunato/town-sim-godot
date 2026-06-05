@@ -4,46 +4,41 @@ const TILE_SIZE := 32
 
 const PLAY_TILESET_PATH := "res://resources/tilesets/play_cells.tres"
 const DEBUG_TILESET_PATH := "res://resources/tilesets/debug_cell_states.tres"
+const PLAY_ATLAS_PATH := "res://assets/tiles/play/play_cells_atlas.png"
+const DEBUG_ATLAS_PATH := "res://assets/tiles/debug/debug_cell_states_atlas.png"
 const PLAY_TILE_ORDER: PackedStringArray = ["grass_a", "grass_b"]
 const DEBUG_TILE_ORDER: PackedStringArray = ["walkable", "blocked", "occupied", "reserved", "protected"]
 
 const PLAY_TILES := {
 	"grass_a": {
-		"path": "res://assets/tiles/play/grass_a.png",
-		"source_id": 0,
+		"atlas_coords": Vector2i(0, 0),
 		"color": Color(0.55, 0.78, 0.42, 1.0),
 	},
 	"grass_b": {
-		"path": "res://assets/tiles/play/grass_b.png",
-		"source_id": 1,
+		"atlas_coords": Vector2i(1, 0),
 		"color": Color(0.51, 0.75, 0.39, 1.0),
 	},
 }
 
 const DEBUG_TILES := {
 	"walkable": {
-		"path": "res://assets/tiles/debug/walkable.png",
-		"source_id": 0,
+		"atlas_coords": Vector2i(0, 0),
 		"color": Color(0.15, 0.95, 0.25, 0.34),
 	},
 	"blocked": {
-		"path": "res://assets/tiles/debug/blocked.png",
-		"source_id": 1,
+		"atlas_coords": Vector2i(1, 0),
 		"color": Color(1.0, 0.1, 0.1, 0.48),
 	},
 	"occupied": {
-		"path": "res://assets/tiles/debug/occupied.png",
-		"source_id": 2,
+		"atlas_coords": Vector2i(2, 0),
 		"color": Color(1.0, 0.5, 0.0, 0.48),
 	},
 	"reserved": {
-		"path": "res://assets/tiles/debug/reserved.png",
-		"source_id": 3,
+		"atlas_coords": Vector2i(3, 0),
 		"color": Color(0.1, 0.45, 1.0, 0.58),
 	},
 	"protected": {
-		"path": "res://assets/tiles/debug/protected.png",
-		"source_id": 4,
+		"atlas_coords": Vector2i(4, 0),
 		"color": Color(0.85, 0.25, 1.0, 0.62),
 	},
 }
@@ -51,10 +46,10 @@ const DEBUG_TILES := {
 
 func _initialize() -> void:
 	var failures: Array[String] = []
-	failures.append_array(_write_tile_images(PLAY_TILES))
-	failures.append_array(_write_tile_images(DEBUG_TILES))
-	failures.append_array(_write_tileset(PLAY_TILESET_PATH, PLAY_TILES, PLAY_TILE_ORDER))
-	failures.append_array(_write_tileset(DEBUG_TILESET_PATH, DEBUG_TILES, DEBUG_TILE_ORDER))
+	failures.append_array(_write_tile_atlas(PLAY_ATLAS_PATH, PLAY_TILES, PLAY_TILE_ORDER))
+	failures.append_array(_write_tile_atlas(DEBUG_ATLAS_PATH, DEBUG_TILES, DEBUG_TILE_ORDER))
+	failures.append_array(_write_tileset(PLAY_TILESET_PATH, PLAY_ATLAS_PATH, PLAY_TILES, PLAY_TILE_ORDER))
+	failures.append_array(_write_tileset(DEBUG_TILESET_PATH, DEBUG_ATLAS_PATH, DEBUG_TILES, DEBUG_TILE_ORDER))
 
 	if failures.is_empty():
 		print("generate_tile_assets.gd: generated play/debug tiles and tilesets")
@@ -65,24 +60,24 @@ func _initialize() -> void:
 		quit(1)
 
 
-func _write_tile_images(tiles: Dictionary) -> Array[String]:
+func _write_tile_atlas(path: String, tiles: Dictionary, tile_order: PackedStringArray) -> Array[String]:
 	var failures: Array[String] = []
-	for tile_name in tiles:
+	var image := Image.create(TILE_SIZE * tile_order.size(), TILE_SIZE, false, Image.FORMAT_RGBA8)
+	for tile_name in tile_order:
 		var tile: Dictionary = tiles[tile_name]
-		var image := Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
-		image.fill(tile.color)
-		var path := String(tile.path)
-		var dir_result := DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path.get_base_dir()))
-		if dir_result != OK:
-			failures.append("Unable to create tile directory for '%s': %s" % [path, error_string(dir_result)])
-			continue
-		var save_result := image.save_png(path)
-		if save_result != OK:
-			failures.append("Unable to save tile image '%s': %s" % [path, error_string(save_result)])
+		var rect := Rect2i(tile.atlas_coords * TILE_SIZE, Vector2i(TILE_SIZE, TILE_SIZE))
+		image.fill_rect(rect, tile.color)
+	var dir_result := DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path.get_base_dir()))
+	if dir_result != OK:
+		failures.append("Unable to create tile atlas directory for '%s': %s" % [path, error_string(dir_result)])
+		return failures
+	var save_result := image.save_png(path)
+	if save_result != OK:
+		failures.append("Unable to save tile atlas '%s': %s" % [path, error_string(save_result)])
 	return failures
 
 
-func _write_tileset(path: String, tiles: Dictionary, tile_order: PackedStringArray) -> Array[String]:
+func _write_tileset(path: String, atlas_path: String, tiles: Dictionary, tile_order: PackedStringArray) -> Array[String]:
 	var failures: Array[String] = []
 	var dir_result := DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path.get_base_dir()))
 	if dir_result != OK:
@@ -95,30 +90,21 @@ func _write_tileset(path: String, tiles: Dictionary, tile_order: PackedStringArr
 		return failures
 
 	var lines: PackedStringArray = []
-	lines.append("[gd_resource type=\"TileSet\" load_steps=%d format=3]" % [tile_order.size() * 2 + 1])
+	lines.append("[gd_resource type=\"TileSet\" load_steps=3 format=3]")
 	lines.append("")
-
-	var index := 1
+	lines.append("[ext_resource type=\"Texture2D\" path=\"%s\" id=\"1_atlas\"]" % atlas_path)
+	lines.append("")
+	lines.append("[sub_resource type=\"TileSetAtlasSource\" id=\"TileSetAtlasSource_atlas\"]")
+	lines.append("texture = ExtResource(\"1_atlas\")")
+	lines.append("texture_region_size = Vector2i(%d, %d)" % [TILE_SIZE, TILE_SIZE])
 	for tile_name in tile_order:
 		var tile: Dictionary = tiles[tile_name]
-		lines.append("[ext_resource type=\"Texture2D\" path=\"%s\" id=\"%d_%s\"]" % [tile.path, index, tile_name])
-		index += 1
+		lines.append("%d:%d/0 = 0" % [tile.atlas_coords.x, tile.atlas_coords.y])
 	lines.append("")
-
-	index = 1
-	for tile_name in tile_order:
-		lines.append("[sub_resource type=\"TileSetAtlasSource\" id=\"TileSetAtlasSource_%s\"]" % tile_name)
-		lines.append("texture = ExtResource(\"%d_%s\")" % [index, tile_name])
-		lines.append("texture_region_size = Vector2i(%d, %d)" % [TILE_SIZE, TILE_SIZE])
-		lines.append("0:0/0 = 0")
-		lines.append("")
-		index += 1
 
 	lines.append("[resource]")
 	lines.append("tile_size = Vector2i(%d, %d)" % [TILE_SIZE, TILE_SIZE])
-	for tile_name in tile_order:
-		var tile: Dictionary = tiles[tile_name]
-		lines.append("sources/%d = SubResource(\"TileSetAtlasSource_%s\")" % [int(tile.source_id), tile_name])
+	lines.append("sources/0 = SubResource(\"TileSetAtlasSource_atlas\")")
 
 	file.store_string("\n".join(lines) + "\n")
 	return failures

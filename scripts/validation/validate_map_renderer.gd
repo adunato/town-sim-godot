@@ -100,11 +100,20 @@ func _verify_tilemap_contract(renderer: Node, model: RefCounted) -> void:
 	_expect(terrain_layer.position == model.origin, "TerrainTileMapLayer position should match GridMapModel origin")
 	_expect(renderer.call("get_populated_terrain_tile_count") == model.grid_width * model.grid_height, "TerrainTileMapLayer should contain one tile per configured cell")
 	_expect(renderer.call("get_terrain_tile_source_id", Vector2i(0, 0)) == 0, "cell (0, 0) should use play tile source A")
-	_expect(renderer.call("get_terrain_tile_source_id", Vector2i(1, 0)) == 1, "cell (1, 0) should use play tile source B")
-	_expect(renderer.call("get_terrain_tile_source_id", Vector2i(0, 1)) == 1, "cell (0, 1) should use play tile source B")
+	_expect(renderer.call("get_terrain_tile_source_id", Vector2i(1, 0)) == 0, "cell (1, 0) should use the shared play atlas source")
+	_expect(renderer.call("get_terrain_tile_atlas_coords", Vector2i(0, 0)) == Vector2i(0, 0), "cell (0, 0) should use play atlas tile A")
+	_expect(renderer.call("get_terrain_tile_atlas_coords", Vector2i(1, 0)) == Vector2i(1, 0), "cell (1, 0) should use play atlas tile B")
+	_expect(renderer.call("get_terrain_tile_atlas_coords", Vector2i(0, 1)) == Vector2i(1, 0), "cell (0, 1) should use play atlas tile B")
+	_expect(renderer.call("get_terrain_tile_atlas_coords", Vector2i(1, 1)) == Vector2i(0, 0), "cell (1, 1) should use play atlas tile A")
 	_expect(renderer.call("get_terrain_tile_source_id", Vector2i(1, 1)) == 0, "cell (1, 1) should use play tile source A")
 	_expect(terrain_layer.get_cell_source_id(Vector2i(0, 0)) == 0, "TerrainTileMapLayer should place source A at cell (0, 0)")
-	_expect(terrain_layer.get_cell_source_id(Vector2i(1, 0)) == 1, "TerrainTileMapLayer should place source B at cell (1, 0)")
+	_expect(terrain_layer.get_cell_source_id(Vector2i(1, 0)) == 0, "TerrainTileMapLayer should place the shared source at cell (1, 0)")
+	_expect(terrain_layer.get_cell_atlas_coords(Vector2i(0, 0)) == Vector2i(0, 0), "TerrainTileMapLayer should place atlas tile A at cell (0, 0)")
+	_expect(terrain_layer.get_cell_atlas_coords(Vector2i(1, 0)) == Vector2i(1, 0), "TerrainTileMapLayer should place atlas tile B at cell (1, 0)")
+
+	var renderer_script_text := FileAccess.get_file_as_string("res://scripts/map/map_renderer.gd")
+	_expect(not renderer_script_text.contains("draw_line("), "regular map renderer should not draw grid lines directly")
+	_expect(not renderer_script_text.contains("draw_rect("), "regular map renderer should not draw boundary or cell rectangles directly")
 
 
 func _verify_startup_scene_runs() -> void:
