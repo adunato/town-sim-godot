@@ -11,6 +11,23 @@ const MODE_PHYSICS := "physics"
 const MODE_ENTITIES := "entities"
 const MODE_ALL := "all"
 const MODES: PackedStringArray = [MODE_GRID, MODE_CELLS, MODE_PHYSICS, MODE_ENTITIES, MODE_ALL]
+const DEBUG_CELL_STATE_LAYER_NAME := "DebugCellStateTileMapLayer"
+const DEBUG_TILESET_PATH := "res://resources/tilesets/debug_cell_states.tres"
+const DEBUG_ATLAS_PATH := "res://assets/tiles/debug/debug_cell_states_atlas.png"
+const DEBUG_TILE_SOURCE := 0
+const DEBUG_TILE_WALKABLE := Vector2i(0, 0)
+const DEBUG_TILE_BLOCKED := Vector2i(1, 0)
+const DEBUG_TILE_OCCUPIED := Vector2i(2, 0)
+const DEBUG_TILE_RESERVED := Vector2i(3, 0)
+const DEBUG_TILE_PROTECTED := Vector2i(4, 0)
+const DEBUG_TILE_COORDS: Array[Vector2i] = [
+	DEBUG_TILE_WALKABLE,
+	DEBUG_TILE_BLOCKED,
+	DEBUG_TILE_OCCUPIED,
+	DEBUG_TILE_RESERVED,
+	DEBUG_TILE_PROTECTED,
+]
+const TILE_SIZE := 32
 
 const COLOR_BOUNDARY := Color(1.0, 1.0, 1.0, 0.95)
 const COLOR_GRID := Color(1.0, 1.0, 1.0, 0.30)
@@ -33,20 +50,26 @@ var _is_enabled := false
 var _map_model: RefCounted
 var _mode_index := 0
 var _proximity_snapshot_source: Node
+var _debug_cell_state_layer: TileMapLayer
+var _debug_tile_set: TileSet
 
 
 func _ready() -> void:
 	visible = false
 	z_index = 100
+	_ensure_debug_cell_state_layer()
+	_update_debug_cell_state_layer_visibility()
 
 
 func _process(_delta: float) -> void:
+	_update_debug_cell_state_layer_visibility()
 	if _is_enabled and (current_mode == MODE_PHYSICS or current_mode == MODE_ENTITIES or current_mode == MODE_ALL):
 		queue_redraw()
 
 
 func set_map_model(map_model: RefCounted) -> void:
 	_map_model = map_model
+	_populate_debug_cell_state_layer()
 	queue_redraw()
 	_emit_debug_state()
 
@@ -63,6 +86,7 @@ func is_overlay_enabled() -> bool:
 func toggle_overlay() -> void:
 	_is_enabled = not _is_enabled
 	visible = _is_enabled
+	_update_debug_cell_state_layer_visibility()
 	queue_redraw()
 	_emit_debug_state()
 
@@ -70,6 +94,7 @@ func toggle_overlay() -> void:
 func cycle_mode() -> void:
 	_mode_index = (_mode_index + 1) % MODES.size()
 	current_mode = MODES[_mode_index]
+	_update_debug_cell_state_layer_visibility()
 	queue_redraw()
 	_emit_debug_state()
 
@@ -102,6 +127,7 @@ func _draw() -> void:
 	if not _is_enabled or _map_model == null:
 		return
 
+	_update_debug_cell_state_layer_visibility()
 	match current_mode:
 		MODE_GRID:
 			_draw_grid_mode()
@@ -122,7 +148,6 @@ func _draw_grid_mode() -> void:
 
 
 func _draw_cells_mode() -> void:
-	_draw_cell_states()
 	_draw_map_reference()
 	_draw_building_footprints()
 
@@ -139,6 +164,42 @@ func _draw_entities_mode() -> void:
 	_draw_entity_labels()
 	_draw_target_markers("debug_selected_target", COLOR_SELECTED, 8.0)
 	_draw_target_markers("debug_hovered_target", COLOR_HOVER, 5.0)
+
+
+func get_debug_cell_state_layer() -> TileMapLayer:
+	_ensure_debug_cell_state_layer()
+	return _debug_cell_state_layer
+
+
+func get_debug_cell_state_tile_source_id(cell: Vector2i) -> int:
+	if _map_model == null or not _map_model.is_cell_in_bounds(cell):
+		return -1
+	return DEBUG_TILE_SOURCE
+
+
+func get_debug_cell_state_tile_atlas_coords(cell: Vector2i) -> Vector2i:
+	if _map_model == null or not _map_model.is_cell_in_bounds(cell):
+		return Vector2i(-1, -1)
+	if _map_model.is_protected(cell):
+		return DEBUG_TILE_PROTECTED
+	if _map_model.is_reserved(cell):
+		return DEBUG_TILE_RESERVED
+	if _map_model.is_occupied(cell):
+		return DEBUG_TILE_OCCUPIED
+	if _map_model.is_blocked(cell):
+		return DEBUG_TILE_BLOCKED
+	if _map_model.is_walkable(cell):
+		return DEBUG_TILE_WALKABLE
+	return Vector2i(-1, -1)
+
+
+func get_populated_debug_cell_state_tile_count() -> int:
+	_ensure_debug_cell_state_layer()
+	return _debug_cell_state_layer.get_used_cells().size()
+
+
+func refresh_debug_cell_state_tiles() -> void:
+	_populate_debug_cell_state_layer()
 
 
 func _draw_map_reference() -> void:
@@ -172,26 +233,63 @@ func _draw_origin_marker() -> void:
 	draw_string(ThemeDB.fallback_font, origin + Vector2(8.0, 18.0), "(0,0)", HORIZONTAL_ALIGNMENT_LEFT, -1.0, 12, COLOR_LABEL)
 
 
-func _draw_cell_states() -> void:
-	var font := ThemeDB.fallback_font
+func _ensure_debug_cell_state_layer() -> void:
+	if _debug_cell_state_layer != null and is_instance_valid(_debug_cell_state_layer):
+		return
+
+	_debug_cell_state_layer = get_node_or_null(DEBUG_CELL_STATE_LAYER_NAME) as TileMapLayer
+	if _debug_cell_state_layer == null:
+		_debug_cell_state_layer = TileMapLayer.new()
+		_debug_cell_state_layer.name = DEBUG_CELL_STATE_LAYER_NAME
+		add_child(_debug_cell_state_layer)
+	_debug_cell_state_layer.tile_set = _get_debug_tile_set()
+	_debug_cell_state_layer.z_index = -1
+
+
+func _get_debug_tile_set() -> TileSet:
+	if _debug_tile_set != null:
+		return _debug_tile_set
+
+	_debug_tile_set = TileSet.new()
+	_debug_tile_set.tile_size = Vector2i(TILE_SIZE, TILE_SIZE)
+	_debug_tile_set.add_source(_build_atlas_source(DEBUG_ATLAS_PATH, DEBUG_TILE_COORDS), DEBUG_TILE_SOURCE)
+	return _debug_tile_set
+
+
+func _build_atlas_source(path: String, atlas_coords: Array[Vector2i]) -> TileSetAtlasSource:
+	var image := Image.new()
+	var load_result := image.load(path)
+	if load_result != OK:
+		push_error("DebugOverlay failed to load debug tile atlas '%s': %s" % [path, error_string(load_result)])
+	var texture := ImageTexture.create_from_image(image)
+	var source := TileSetAtlasSource.new()
+	source.texture = texture
+	source.texture_region_size = Vector2i(TILE_SIZE, TILE_SIZE)
+	for coords in atlas_coords:
+		source.create_tile(coords)
+	return source
+
+
+func _populate_debug_cell_state_layer() -> void:
+	_ensure_debug_cell_state_layer()
+	_debug_cell_state_layer.clear()
+	if _map_model == null:
+		_update_debug_cell_state_layer_visibility()
+		return
+
+	_debug_cell_state_layer.position = _map_model.origin
 	for y in range(_map_model.grid_height):
 		for x in range(_map_model.grid_width):
 			var cell := Vector2i(x, y)
-			var cell_rect := _cell_rect(cell)
-			if _map_model.is_walkable(cell):
-				draw_rect(cell_rect, COLOR_WALKABLE, true)
-			if _map_model.is_blocked(cell):
-				draw_rect(cell_rect, COLOR_BLOCKED, true)
-			if _map_model.is_occupied(cell):
-				draw_rect(cell_rect, COLOR_OCCUPIED, true)
-			if _map_model.is_reserved(cell):
-				draw_rect(cell_rect, COLOR_RESERVED, true)
-			if _map_model.is_protected(cell):
-				draw_rect(cell_rect, COLOR_PROTECTED, true)
-			var state_label := _cell_state_label(cell)
-			if not state_label.is_empty():
-				draw_rect(cell_rect, Color(1.0, 1.0, 1.0, 0.9), false, 2.0)
-				_draw_centered_cell_label(font, cell_rect, state_label)
+			var atlas_coords := get_debug_cell_state_tile_atlas_coords(cell)
+			if atlas_coords.x >= 0:
+				_debug_cell_state_layer.set_cell(cell, DEBUG_TILE_SOURCE, atlas_coords)
+	_update_debug_cell_state_layer_visibility()
+
+
+func _update_debug_cell_state_layer_visibility() -> void:
+	_ensure_debug_cell_state_layer()
+	_debug_cell_state_layer.visible = _is_enabled and (current_mode == MODE_CELLS or current_mode == MODE_ALL)
 
 
 func _draw_building_footprints() -> void:

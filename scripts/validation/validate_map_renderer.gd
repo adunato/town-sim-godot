@@ -33,6 +33,7 @@ func _run_checks() -> void:
 	_verify_scene_ownership()
 	_verify_geometry(renderer, model)
 	_verify_visual_contract(renderer)
+	_verify_tilemap_contract(renderer, model)
 	await _verify_startup_scene_runs()
 	_verify_load_failure_reporting()
 
@@ -49,6 +50,7 @@ func _verify_scene_ownership() -> void:
 	_expect(scene.has_node("World"), "main scene should contain World branch")
 	_expect(scene.has_node("World/Map"), "main scene should contain World/Map renderer")
 	_expect(scene.get_node("World/Map").get_script() == MapRendererScript, "World/Map should use map_renderer.gd")
+	_expect(scene.get_node("World/Map").has_node("TerrainTileMapLayer"), "World/Map should own TerrainTileMapLayer")
 	_expect(scene.get_node("World").get_child(0).name == "Map", "Map renderer should be the first World child")
 	_expect(scene.get_node("World/Map").z_index < scene.get_node("World/DebugOverlay").z_index, "Map renderer should draw below DebugOverlay")
 
@@ -91,6 +93,29 @@ func _verify_visual_contract(renderer: Node) -> void:
 	_expect(border_width < boundary_width, "outer map boundary should be wider than internal cell borders")
 
 
+func _verify_tilemap_contract(renderer: Node, model: RefCounted) -> void:
+	var terrain_layer: TileMapLayer = renderer.call("get_terrain_layer")
+	_expect(terrain_layer != null, "map renderer should expose TerrainTileMapLayer")
+	_expect(terrain_layer.tile_set != null, "TerrainTileMapLayer should have a play TileSet")
+	_expect(terrain_layer.position == model.origin, "TerrainTileMapLayer position should match GridMapModel origin")
+	_expect(renderer.call("get_populated_terrain_tile_count") == model.grid_width * model.grid_height, "TerrainTileMapLayer should contain one tile per configured cell")
+	_expect(renderer.call("get_terrain_tile_source_id", Vector2i(0, 0)) == 0, "cell (0, 0) should use play tile source A")
+	_expect(renderer.call("get_terrain_tile_source_id", Vector2i(1, 0)) == 0, "cell (1, 0) should use the shared play atlas source")
+	_expect(renderer.call("get_terrain_tile_atlas_coords", Vector2i(0, 0)) == Vector2i(0, 0), "cell (0, 0) should use play atlas tile A")
+	_expect(renderer.call("get_terrain_tile_atlas_coords", Vector2i(1, 0)) == Vector2i(1, 0), "cell (1, 0) should use play atlas tile B")
+	_expect(renderer.call("get_terrain_tile_atlas_coords", Vector2i(0, 1)) == Vector2i(1, 0), "cell (0, 1) should use play atlas tile B")
+	_expect(renderer.call("get_terrain_tile_atlas_coords", Vector2i(1, 1)) == Vector2i(0, 0), "cell (1, 1) should use play atlas tile A")
+	_expect(renderer.call("get_terrain_tile_source_id", Vector2i(1, 1)) == 0, "cell (1, 1) should use play tile source A")
+	_expect(terrain_layer.get_cell_source_id(Vector2i(0, 0)) == 0, "TerrainTileMapLayer should place source A at cell (0, 0)")
+	_expect(terrain_layer.get_cell_source_id(Vector2i(1, 0)) == 0, "TerrainTileMapLayer should place the shared source at cell (1, 0)")
+	_expect(terrain_layer.get_cell_atlas_coords(Vector2i(0, 0)) == Vector2i(0, 0), "TerrainTileMapLayer should place atlas tile A at cell (0, 0)")
+	_expect(terrain_layer.get_cell_atlas_coords(Vector2i(1, 0)) == Vector2i(1, 0), "TerrainTileMapLayer should place atlas tile B at cell (1, 0)")
+
+	var renderer_script_text := FileAccess.get_file_as_string("res://scripts/map/map_renderer.gd")
+	_expect(not renderer_script_text.contains("draw_line("), "regular map renderer should not draw grid lines directly")
+	_expect(not renderer_script_text.contains("draw_rect("), "regular map renderer should not draw boundary or cell rectangles directly")
+
+
 func _verify_startup_scene_runs() -> void:
 	var scene := MainScene.instantiate()
 	get_root().add_child(scene)
@@ -99,6 +124,7 @@ func _verify_startup_scene_runs() -> void:
 	var map := scene.get_node("World/Map")
 	_expect(map.call("has_map_model"), "startup scene Map renderer should have a loaded map model")
 	_expect(map.call("get_load_error").is_empty(), "startup scene Map renderer should not report a load error")
+	_expect(map.call("get_populated_terrain_tile_count") > 0, "startup scene Map renderer should populate terrain tiles")
 
 	scene.queue_free()
 	await process_frame
