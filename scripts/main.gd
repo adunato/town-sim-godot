@@ -11,6 +11,7 @@ const BuildingDataRegistryScript := preload("res://scripts/buildings/building_da
 @onready var _selection_controller := $World/SelectionController
 @onready var _highlight_controller := $World/HighlightController
 @onready var _proximity_controller := $World/ProximityController
+@onready var _interaction_controller := $World/InteractionController
 @onready var _debug_readout := $UI/DebugReadout
 
 var _map_model: RefCounted
@@ -33,6 +34,7 @@ func _ready() -> void:
 	_configure_highlights()
 	_place_player_at_spawn()
 	_configure_proximity()
+	_configure_interaction()
 	_configure_player_camera()
 	_debug_overlay.set_map_model(_map_model)
 	_debug_readout.set_seed(_map_model.seed)
@@ -74,6 +76,17 @@ func _configure_proximity() -> void:
 		push_error("Unable to configure proximity: %s" % proximity_result.error)
 
 
+func _configure_interaction() -> void:
+	var interaction_result: Dictionary = _interaction_controller.configure(
+		_picking_controller,
+		_selection_controller,
+		_proximity_controller,
+		_highlight_controller
+	)
+	if not interaction_result.ok:
+		push_error("Unable to configure interaction: %s" % interaction_result.error)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_debug_overlay") or _is_key_pressed(event, KEY_F3):
 		_debug_overlay.toggle_overlay()
@@ -83,6 +96,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("select_entity") or _is_left_mouse_pressed(event):
 		_apply_selection_input(event)
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("interact_entity") or _is_right_mouse_pressed(event):
+		_apply_interaction_input(event)
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMouseMotion:
 		_picking_controller.update_hover_at_screen_position(event.position)
@@ -102,6 +118,7 @@ func _ensure_movement_input_actions() -> void:
 
 func _ensure_selection_input_actions() -> void:
 	_add_mouse_button_action("select_entity", MOUSE_BUTTON_LEFT)
+	_add_mouse_button_action("interact_entity", MOUSE_BUTTON_RIGHT)
 
 
 func _place_player_at_spawn() -> void:
@@ -167,6 +184,19 @@ func _apply_selection_input(event: InputEvent) -> void:
 		_selection_controller.apply_picked_target(null)
 
 
+func _apply_interaction_input(event: InputEvent) -> Dictionary:
+	var screen_position := get_viewport().get_mouse_position()
+	if event is InputEventMouseButton:
+		screen_position = event.position
+
+	var pick_result: Dictionary = _picking_controller.pick_at_screen_position(screen_position)
+	_picking_controller.update_hover_from_result(pick_result)
+	var cursor_target: Node = null
+	if bool(pick_result.get("has_target", false)):
+		cursor_target = pick_result.target
+	return _interaction_controller.attempt_interaction(cursor_target)
+
+
 func _is_key_pressed(event: InputEvent, keycode: Key) -> bool:
 	return event is InputEventKey and event.pressed and not event.echo and event.keycode == keycode
 
@@ -175,3 +205,9 @@ func _is_left_mouse_pressed(event: InputEvent) -> bool:
 	return event is InputEventMouseButton \
 		and event.pressed \
 		and event.button_index == MOUSE_BUTTON_LEFT
+
+
+func _is_right_mouse_pressed(event: InputEvent) -> bool:
+	return event is InputEventMouseButton \
+		and event.pressed \
+		and event.button_index == MOUSE_BUTTON_RIGHT
