@@ -1,0 +1,40 @@
+[gd_resource type="TileSet" load_steps=11 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/tiles/debug/walkable.png" id="1_walkable"]
+[ext_resource type="Texture2D" path="res://assets/tiles/debug/blocked.png" id="2_blocked"]
+[ext_resource type="Texture2D" path="res://assets/tiles/debug/occupied.png" id="3_occupied"]
+[ext_resource type="Texture2D" path="res://assets/tiles/debug/reserved.png" id="4_reserved"]
+[ext_resource type="Texture2D" path="res://assets/tiles/debug/protected.png" id="5_protected"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_walkable"]
+texture = ExtResource("1_walkable")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_blocked"]
+texture = ExtResource("2_blocked")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_occupied"]
+texture = ExtResource("3_occupied")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_reserved"]
+texture = ExtResource("4_reserved")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_protected"]
+texture = ExtResource("5_protected")
+texture_region_size = Vector2i(32, 32)
+0:0/0 = 0
+
+[resource]
+tile_size = Vector2i(32, 32)
+sources/0 = SubResource("TileSetAtlasSource_walkable")
+sources/1 = SubResource("TileSetAtlasSource_blocked")
+sources/2 = SubResource("TileSetAtlasSource_occupied")
+sources/3 = SubResource("TileSetAtlasSource_reserved")
+sources/4 = SubResource("TileSetAtlasSource_protected")
