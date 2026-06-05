@@ -12,9 +12,11 @@ const BuildingDataRegistryScript := preload("res://scripts/buildings/building_da
 @onready var _highlight_controller := $World/HighlightController
 @onready var _proximity_controller := $World/ProximityController
 @onready var _interaction_controller := $World/InteractionController
+@onready var _game_hud := $UI/GameHud
 @onready var _debug_readout := $UI/DebugReadout
 
 var _map_model: RefCounted
+var _pending_interaction_target: Node
 
 
 func _ready() -> void:
@@ -35,11 +37,14 @@ func _ready() -> void:
 	_place_player_at_spawn()
 	_configure_proximity()
 	_configure_interaction()
+	_configure_hud()
 	_configure_player_camera()
 	_debug_overlay.set_map_model(_map_model)
 	_debug_readout.set_seed(_map_model.seed)
 	_debug_overlay.debug_state_changed.connect(_debug_readout.set_overlay_state)
+	_debug_overlay.debug_state_changed.connect(_game_hud.set_debug_state)
 	_debug_readout.set_overlay_state(_debug_overlay.is_overlay_enabled(), _debug_overlay.current_mode, _debug_overlay.get_legend_entries())
+	_game_hud.set_debug_state(_debug_overlay.is_overlay_enabled(), _debug_overlay.current_mode, _debug_overlay.get_legend_entries())
 
 
 func _configure_building_entities() -> void:
@@ -87,6 +92,16 @@ func _configure_interaction() -> void:
 		push_error("Unable to configure interaction: %s" % interaction_result.error)
 
 
+func _configure_hud() -> void:
+	_game_hud.set_selection_snapshot(_selection_controller.get_selection_snapshot())
+	_selection_controller.selection_changed.connect(_game_hud.set_selection_snapshot)
+	_interaction_controller.interaction_attempted.connect(_on_interaction_attempted)
+	_game_hud.clear_selection_requested.connect(_selection_controller.clear_selection)
+	_game_hud.debug_toggle_requested.connect(_debug_overlay.toggle_overlay)
+	_game_hud.interaction_context_requested.connect(_open_selected_interaction_context)
+	_game_hud.inspect_interaction_requested.connect(_inspect_pending_interaction_target)
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_debug_overlay") or _is_key_pressed(event, KEY_F3):
 		_debug_overlay.toggle_overlay()
@@ -98,7 +113,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		_apply_selection_input(event)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("interact_entity") or _is_right_mouse_pressed(event):
-		_apply_interaction_input(event)
+		_open_interaction_context_from_input(event)
 		get_viewport().set_input_as_handled()
 	elif event is InputEventMouseMotion:
 		_picking_controller.update_hover_at_screen_position(event.position)
@@ -184,17 +199,49 @@ func _apply_selection_input(event: InputEvent) -> void:
 		_selection_controller.apply_picked_target(null)
 
 
-func _apply_interaction_input(event: InputEvent) -> Dictionary:
+func _open_interaction_context_from_input(event: InputEvent) -> void:
 	var screen_position := get_viewport().get_mouse_position()
 	if event is InputEventMouseButton:
 		screen_position = event.position
 
 	var pick_result: Dictionary = _picking_controller.pick_at_screen_position(screen_position)
 	_picking_controller.update_hover_from_result(pick_result)
-	var cursor_target: Node = null
+	var cursor_target: Node = _selection_controller.get_selected_target()
 	if bool(pick_result.get("has_target", false)):
 		cursor_target = pick_result.target
-	return _interaction_controller.attempt_interaction(cursor_target)
+	_open_interaction_context(screen_position, cursor_target)
+
+
+func _open_selected_interaction_context(screen_position: Vector2) -> void:
+	_open_interaction_context(screen_position, _selection_controller.get_selected_target())
+
+
+func _open_interaction_context(screen_position: Vector2, target: Node) -> void:
+	_pending_interaction_target = target
+	if target == null:
+		_game_hud.set_status_text("No interaction target.")
+		return
+	_game_hud.show_interaction_context_menu(screen_position, _target_display_name(target), true)
+
+
+func _inspect_pending_interaction_target() -> void:
+	var result: Dictionary = _interaction_controller.attempt_interaction(_pending_interaction_target)
+	_game_hud.set_status_text(String(result.get("message", "")))
+
+
+func _on_interaction_attempted(result: Dictionary) -> void:
+	_game_hud.set_status_text(String(result.get("message", "")))
+
+
+func _target_display_name(target: Node) -> String:
+	if target == null:
+		return ""
+	if target.has_method("get_display_name"):
+		return String(target.call("get_display_name"))
+	var identity := target.get_node_or_null("IdentityComponent")
+	if identity != null and identity.has_method("get_display_name"):
+		return String(identity.call("get_display_name"))
+	return target.name
 
 
 func _is_key_pressed(event: InputEvent, keycode: Key) -> bool:

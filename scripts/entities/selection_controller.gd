@@ -111,6 +111,7 @@ func _build_selection_snapshot(target: Node) -> Dictionary:
 		"entity_id": _get_entity_id(target),
 		"entity_type": _get_entity_type(target),
 		"display_name": _get_display_name(target),
+		"position": _get_position(target),
 		"selectable": _target_reports_selectable(target),
 		"interactable": _target_reports_interactable(target),
 	}
@@ -149,6 +150,12 @@ func _get_entity_type(target: Node) -> String:
 func _get_display_name(target: Node) -> String:
 	var identity := CapabilityResolverScript.get_identity(target)
 	return String(identity.call("get_display_name")) if identity != null else ""
+
+
+func _get_position(target: Node) -> Vector2:
+	if target is Node2D:
+		return (target as Node2D).global_position
+	return Vector2.ZERO
 
 
 func _disconnect_selected_target() -> void:
