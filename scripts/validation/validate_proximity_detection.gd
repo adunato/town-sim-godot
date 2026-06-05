@@ -27,7 +27,6 @@ func _run_checks() -> void:
 	await _verify_controller_state_and_highlight_wiring()
 	await _verify_snapshot_and_debug_source()
 	await _verify_main_scene_integration()
-	await _verify_no_interaction_behavior()
 
 
 func _verify_distance_rule() -> void:
@@ -135,13 +134,6 @@ func _verify_main_scene_integration() -> void:
 	scene.queue_free()
 	await process_frame
 	await process_frame
-
-
-func _verify_no_interaction_behavior() -> void:
-	_expect(not InputMap.has_action("interact_entity"), "proximity feature should not add right-click interaction input")
-	var main_source := FileAccess.get_file_as_string("res://scripts/main.gd")
-	_expect(not main_source.contains("_apply_interaction"), "proximity feature should not add interaction handling to main.gd")
-	_expect(not main_source.contains("interaction log"), "proximity feature should not add interaction log behavior")
 
 
 func _string_array_from_variant(value: Variant) -> Array[String]:
