@@ -1,38 +1,38 @@
 {
   "schema_version": 1,
   "definitions": [
-    {
-      "id": "town_hall",
-      "display_name": "Town Hall",
-      "footprint_cells": {
-        "width": 4,
-        "height": 3
-      },
-      "prototype_color": "#8F6A3D",
-      "selectable": true,
-      "interactable": true
-    },
-    {
-      "id": "bakery",
-      "display_name": "Bakery",
-      "footprint_cells": {
-        "width": 2,
-        "height": 2
-      },
-      "prototype_color": "#D28A5E",
-      "selectable": true,
-      "interactable": true
-    },
-    {
-      "id": "house",
-      "display_name": "House",
-      "footprint_cells": {
-        "width": 2,
-        "height": 2
-      },
-      "prototype_color": "#6FA8DC",
-      "selectable": true,
-      "interactable": false
-    }
+	{
+	  "id": "town_hall",
+	  "display_name": "Town Hall",
+	  "footprint_cells": {
+		"width": 4,
+		"height": 3
+	  },
+	  "prototype_color": "#8F6A3D",
+	  "selectable": true,
+	  "interactable": true
+	},
+	{
+	  "id": "bakery",
+	  "display_name": "Bakery",
+	  "footprint_cells": {
+		"width": 2,
+		"height": 2
+	  },
+	  "prototype_color": "#D28A5E",
+	  "selectable": true,
+	  "interactable": true
+	},
+	{
+	  "id": "house",
+	  "display_name": "House",
+	  "footprint_cells": {
+		"width": 2,
+		"height": 2
+	  },
+	  "prototype_color": "#6FA8DC",
+	  "selectable": true,
+	  "interactable": false
+	}
   ]
 }
