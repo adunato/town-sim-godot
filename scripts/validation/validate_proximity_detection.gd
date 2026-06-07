@@ -1,7 +1,6 @@
 extends SceneTree
 
 const MainScene := preload("res://scenes/main.tscn")
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
 const IdentityComponentScript := preload("res://scripts/entities/components/identity_component.gd")
 const ProximityTargetComponentScript := preload("res://scripts/entities/components/proximity_target_component.gd")
 const ProximityControllerScript := preload("res://scripts/entities/proximity_controller.gd")
@@ -55,7 +54,7 @@ func _verify_controller_state_and_highlight_wiring() -> void:
 	await process_frame
 
 	var configure_result: Dictionary = controller.configure(player, buildings, highlight)
-	_expect(configure_result.ok, "ProximityController should configure with player, buildings, and highlight controller")
+	_expect(configure_result.ok, "ProximityController should configure with player, entity owner, and highlight controller")
 	_expect(not controller.is_entity_nearby(building), "building should start outside range")
 	_expect(controller.get_last_entered_entity_ids().is_empty(), "outside startup should not record an enter transition")
 
@@ -123,8 +122,8 @@ func _verify_main_scene_integration() -> void:
 		var buildings := scene.get_node("World/Buildings")
 		var entities: Array[Node] = buildings.call("get_building_entities")
 		for entity in entities:
-			_expect(CapabilityResolverScript.get_proximity_target(entity) != null, "startup building should expose ProximityTargetComponent")
-			_expect(CapabilityResolverScript.get_identity(entity) != null, "startup building should expose IdentityComponent for proximity IDs")
+			_expect(entity.get_node_or_null("ProximityTargetComponent") != null, "startup building should expose ProximityTargetComponent")
+			_expect(entity.get_node_or_null("IdentityComponent") != null, "startup building should expose IdentityComponent for proximity IDs")
 
 	var snapshot: Dictionary = controller.call("get_proximity_snapshot")
 	_expect(float(snapshot.get("proximity_radius", 0.0)) > 0.0, "startup proximity snapshot should include positive radius")
@@ -191,6 +190,9 @@ class MockBuildingsOwner:
 		add_child(building)
 
 	func get_building_entities() -> Array[Node]:
+		return get_entity_targets()
+
+	func get_entity_targets() -> Array[Node]:
 		var result: Array[Node] = []
 		for building in _buildings:
 			if is_instance_valid(building):

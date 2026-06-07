@@ -53,6 +53,10 @@ func get_building_entities() -> Array[Node]:
 	return entities
 
 
+func get_entity_targets() -> Array[Node]:
+	return get_building_entities()
+
+
 func get_collision_bodies() -> Array[StaticBody2D]:
 	var bodies: Array[StaticBody2D] = []
 	for entity in get_building_entities():

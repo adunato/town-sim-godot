@@ -3,21 +3,19 @@ extends Node
 
 signal hover_changed(snapshot: Dictionary)
 
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
-
 const EMPTY_PICKING_RESULT := {
 	"has_target": false,
 }
 
-var _buildings_owner: Node
+var _entity_owner: Node
 var _hovered_target: Node
 var _hover_snapshot: Dictionary = EMPTY_PICKING_RESULT.duplicate(true)
 
 
-func configure(buildings_owner: Node) -> Dictionary:
-	if buildings_owner == null:
-		return _failure("PickingController requires a buildings owner.")
-	_buildings_owner = buildings_owner
+func configure(entity_owner: Node) -> Dictionary:
+	if entity_owner == null:
+		return _failure("PickingController requires an entity owner.")
+	_entity_owner = entity_owner
 	clear_hover()
 	return _success()
 
@@ -86,8 +84,8 @@ func get_hover_snapshot() -> Dictionary:
 
 func _pickable_entities_containing(world_point: Vector2) -> Array[Node]:
 	var matches: Array[Node] = []
-	for entity in _get_building_entities():
-		var pickable := CapabilityResolverScript.get_pickable(entity)
+	for entity in _get_target_entities():
+		var pickable := entity.get_node_or_null("PickableComponent")
 		if pickable == null:
 			continue
 		if bool(pickable.call("contains_world_point", world_point)):
@@ -95,27 +93,27 @@ func _pickable_entities_containing(world_point: Vector2) -> Array[Node]:
 	return matches
 
 
-func _get_building_entities() -> Array[Node]:
-	if _buildings_owner == null:
+func _get_target_entities() -> Array[Node]:
+	if _entity_owner == null:
 		return []
-	if _buildings_owner.has_method("get_building_entities"):
+	if _entity_owner.has_method("get_entity_targets"):
 		var owner_entities: Array[Node] = []
-		for entity in _buildings_owner.call("get_building_entities"):
+		for entity in _entity_owner.call("get_entity_targets"):
 			if entity is Node:
 				owner_entities.append(entity)
 		return owner_entities
 
 	var child_entities: Array[Node] = []
-	for child in _buildings_owner.get_children():
+	for child in _entity_owner.get_children():
 		if child is Node:
 			child_entities.append(child)
 	return child_entities
 
 
-func _is_pickable_building_entity(entity: Node) -> bool:
+func _is_pickable_entity(entity: Node) -> bool:
 	return entity != null \
-		and CapabilityResolverScript.get_pickable(entity) != null \
-		and CapabilityResolverScript.get_identity(entity) != null
+		and entity.get_node_or_null("PickableComponent") != null \
+		and entity.get_node_or_null("IdentityComponent") != null
 
 
 func _compare_pickable_entities(first: Node, second: Node) -> bool:
@@ -130,10 +128,10 @@ func _build_picking_result(target: Node) -> Dictionary:
 	if target == null:
 		return EMPTY_PICKING_RESULT.duplicate(true)
 
-	var identity := CapabilityResolverScript.get_identity(target)
-	var pickable := CapabilityResolverScript.get_pickable(target)
-	var selectable := CapabilityResolverScript.get_selectable(target)
-	var interactable := CapabilityResolverScript.get_interactable(target)
+	var identity := target.get_node_or_null("IdentityComponent")
+	var pickable := target.get_node_or_null("PickableComponent")
+	var selectable := target.get_node_or_null("SelectableComponent")
+	var interactable := target.get_node_or_null("InteractableComponent")
 	if identity == null or pickable == null:
 		return EMPTY_PICKING_RESULT.duplicate(true)
 
@@ -152,12 +150,12 @@ func _build_picking_result(target: Node) -> Dictionary:
 func _refresh_hovered_target() -> void:
 	if _hovered_target == null:
 		return
-	if not is_instance_valid(_hovered_target) or not _hovered_target.is_inside_tree() or not _is_pickable_building_entity(_hovered_target):
+	if not is_instance_valid(_hovered_target) or not _hovered_target.is_inside_tree() or not _is_pickable_entity(_hovered_target):
 		clear_hover()
 
 
 func _get_entity_id(entity: Node) -> String:
-	var identity := CapabilityResolverScript.get_identity(entity)
+	var identity := entity.get_node_or_null("IdentityComponent")
 	if identity == null:
 		return ""
 	return String(identity.call("get_entity_id"))
