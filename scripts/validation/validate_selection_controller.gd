@@ -1,7 +1,6 @@
 extends SceneTree
 
 const MainScene := preload("res://scenes/main.tscn")
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
 const IdentityComponentScript := preload("res://scripts/entities/components/identity_component.gd")
 const SelectableComponentScript := preload("res://scripts/entities/components/selectable_component.gd")
 const InteractableComponentScript := preload("res://scripts/entities/components/interactable_component.gd")
@@ -45,7 +44,7 @@ func _verify_controller_contract() -> void:
 	var first_result: Dictionary = controller.apply_picked_target(first)
 	_expect(first_result.ok, "selecting a selectable entity should return ok")
 	_expect(controller.get_selected_target() == first, "first selectable entity should become selected")
-	_expect(bool(CapabilityResolverScript.get_selectable(first).call("is_selected")), "first selectable component should own local selected state")
+	_expect(bool(first.get_node_or_null("SelectableComponent").call("is_selected")), "first selectable component should own local selected state")
 	_expect(_received_snapshots.size() == 1, "selecting first entity should emit one snapshot")
 	_verify_target_snapshot(_received_snapshots[0], "building.house.01", "building", "House", true, true)
 
@@ -59,8 +58,8 @@ func _verify_controller_contract() -> void:
 	var second_result: Dictionary = controller.apply_picked_target(second)
 	_expect(second_result.ok, "selecting a second entity should return ok")
 	_expect(controller.get_selected_target() == second, "second selectable entity should replace first")
-	_expect(not bool(CapabilityResolverScript.get_selectable(first).call("is_selected")), "replaced selectable component should be deselected")
-	_expect(bool(CapabilityResolverScript.get_selectable(second).call("is_selected")), "second selectable component should own local selected state")
+	_expect(not bool(first.get_node_or_null("SelectableComponent").call("is_selected")), "replaced selectable component should be deselected")
+	_expect(bool(second.get_node_or_null("SelectableComponent").call("is_selected")), "second selectable component should own local selected state")
 	_expect(_received_snapshots.size() == 1, "selecting second entity should emit one snapshot")
 	_verify_target_snapshot(controller.get_selection_snapshot(), "building.store.01", "building", "Store", true, false)
 
@@ -68,7 +67,7 @@ func _verify_controller_contract() -> void:
 	var empty_result: Dictionary = controller.apply_picked_target(null)
 	_expect(empty_result.ok, "empty-world selection should return ok")
 	_expect(controller.get_selected_target() == null, "empty-world selection should clear target")
-	_expect(not bool(CapabilityResolverScript.get_selectable(second).call("is_selected")), "empty-world selection should deselect previous component")
+	_expect(not bool(second.get_node_or_null("SelectableComponent").call("is_selected")), "empty-world selection should deselect previous component")
 	_expect(_received_snapshots.size() == 1, "empty-world selection should emit one clear snapshot")
 	_verify_empty_snapshot(_received_snapshots[0])
 

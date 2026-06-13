@@ -1,7 +1,6 @@
 extends SceneTree
 
 const MainScene := preload("res://scenes/main.tscn")
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
 const IdentityComponentScript := preload("res://scripts/entities/components/identity_component.gd")
 const InteractableComponentScript := preload("res://scripts/entities/components/interactable_component.gd")
 const InteractionControllerScript := preload("res://scripts/interaction/interaction_controller.gd")
@@ -159,8 +158,8 @@ func _verify_startup_scene_integration() -> void:
 		_expect(not entities.is_empty(), "startup scene should create generated building entities for interaction")
 		if not entities.is_empty():
 			var target := entities[0]
-			_expect(CapabilityResolverScript.get_identity(target) != null, "startup building should expose IdentityComponent")
-			_expect(CapabilityResolverScript.get_interactable(target) != null, "startup building should expose InteractableComponent")
+			_expect(target.get_node_or_null("IdentityComponent") != null, "startup building should expose IdentityComponent")
+			_expect(target.get_node_or_null("InteractableComponent") != null, "startup building should expose InteractableComponent")
 
 	scene.queue_free()
 	await process_frame

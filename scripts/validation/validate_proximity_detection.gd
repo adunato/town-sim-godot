@@ -1,7 +1,6 @@
 extends SceneTree
 
 const MainScene := preload("res://scenes/main.tscn")
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
 const IdentityComponentScript := preload("res://scripts/entities/components/identity_component.gd")
 const ProximityTargetComponentScript := preload("res://scripts/entities/components/proximity_target_component.gd")
 const ProximityControllerScript := preload("res://scripts/entities/proximity_controller.gd")
@@ -123,8 +122,8 @@ func _verify_main_scene_integration() -> void:
 		var buildings := scene.get_node("World/Buildings")
 		var entities: Array[Node] = buildings.call("get_building_entities")
 		for entity in entities:
-			_expect(CapabilityResolverScript.get_proximity_target(entity) != null, "startup building should expose ProximityTargetComponent")
-			_expect(CapabilityResolverScript.get_identity(entity) != null, "startup building should expose IdentityComponent for proximity IDs")
+			_expect(entity.get_node_or_null("ProximityTargetComponent") != null, "startup building should expose ProximityTargetComponent")
+			_expect(entity.get_node_or_null("IdentityComponent") != null, "startup building should expose IdentityComponent for proximity IDs")
 
 	var snapshot: Dictionary = controller.call("get_proximity_snapshot")
 	_expect(float(snapshot.get("proximity_radius", 0.0)) > 0.0, "startup proximity snapshot should include positive radius")

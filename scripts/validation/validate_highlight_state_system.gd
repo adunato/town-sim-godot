@@ -1,7 +1,6 @@
 extends SceneTree
 
 const MainScene := preload("res://scenes/main.tscn")
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
 const IdentityComponentScript := preload("res://scripts/entities/components/identity_component.gd")
 const PickableComponentScript := preload("res://scripts/entities/components/pickable_component.gd")
 const SelectableComponentScript := preload("res://scripts/entities/components/selectable_component.gd")
@@ -185,7 +184,7 @@ func _verify_main_scene_integration() -> void:
 		return
 
 	var target := entities[0]
-	var highlightable := CapabilityResolverScript.get_highlightable(target)
+	var highlightable := target.get_node_or_null("HighlightableComponent")
 	_expect(highlightable != null, "generated building should expose HighlightableComponent")
 
 	_expect(controller.set_highlight_input(target, &"debug_override", true).ok, "startup controller should set debug_override directly")
@@ -199,10 +198,10 @@ func _verify_main_scene_integration() -> void:
 
 
 func _picking_result(target: Node) -> Dictionary:
-	var identity := CapabilityResolverScript.get_identity(target)
-	var pickable := CapabilityResolverScript.get_pickable(target)
-	var selectable := CapabilityResolverScript.get_selectable(target)
-	var interactable := CapabilityResolverScript.get_interactable(target)
+	var identity := target.get_node_or_null("IdentityComponent")
+	var pickable := target.get_node_or_null("PickableComponent")
+	var selectable := target.get_node_or_null("SelectableComponent")
+	var interactable := target.get_node_or_null("InteractableComponent")
 	return {
 		"has_target": true,
 		"target": target,
