@@ -5,7 +5,6 @@ const GridMapModelScript := preload("res://scripts/map/grid_map_model.gd")
 const MainScene := preload("res://scenes/main.tscn")
 const MapRendererScript := preload("res://scripts/map/map_renderer.gd")
 const BuildingEntitySpawnerScript := preload("res://scripts/buildings/building_entity_spawner.gd")
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
 
 const RECT_TOLERANCE := 0.01
 const WORLD_COLLISION_LAYER := 1
@@ -118,12 +117,12 @@ func _verify_public_api(entity: Node, instance: Dictionary, definition: Dictiona
 
 
 func _verify_capability_components(entity: Node, instance: Dictionary, definition: Dictionary, expected_rect: Rect2) -> void:
-	var identity: Node = CapabilityResolverScript.get_identity(entity)
-	var pickable: Node = CapabilityResolverScript.get_pickable(entity)
-	var selectable: Node = CapabilityResolverScript.get_selectable(entity)
-	var highlightable: Node = CapabilityResolverScript.get_highlightable(entity)
-	var proximity_target: Node = CapabilityResolverScript.get_proximity_target(entity)
-	var interactable: Node = CapabilityResolverScript.get_interactable(entity)
+	var identity := entity.get_node_or_null("IdentityComponent")
+	var pickable := entity.get_node_or_null("PickableComponent")
+	var selectable := entity.get_node_or_null("SelectableComponent")
+	var highlightable := entity.get_node_or_null("HighlightableComponent")
+	var proximity_target := entity.get_node_or_null("ProximityTargetComponent")
+	var interactable := entity.get_node_or_null("InteractableComponent")
 	_expect(identity != null, "building entity '%s' should have IdentityComponent" % instance.instance_id)
 	_expect(pickable != null, "building entity '%s' should have PickableComponent" % instance.instance_id)
 	_expect(selectable != null, "building entity '%s' should have SelectableComponent" % instance.instance_id)
@@ -198,12 +197,12 @@ func _verify_startup_scene() -> void:
 		_expect(entities.size() == instances.size(), "startup scene should create one building entity per generated building instance")
 		for entity in entities:
 			_expect(entity.get_parent() == buildings, "building entity '%s' should be owned by World/Buildings" % entity.call("get_source_instance_id"))
-			_expect(CapabilityResolverScript.get_identity(entity) != null, "startup building '%s' should expose identity through component" % entity.call("get_source_instance_id"))
-			_expect(CapabilityResolverScript.get_pickable(entity) != null, "startup building '%s' should expose picking through component" % entity.call("get_source_instance_id"))
-			_expect(CapabilityResolverScript.get_selectable(entity) != null, "startup building '%s' should expose selection through component" % entity.call("get_source_instance_id"))
-			_expect(CapabilityResolverScript.get_highlightable(entity) != null, "startup building '%s' should expose highlighting through component" % entity.call("get_source_instance_id"))
-			_expect(CapabilityResolverScript.get_proximity_target(entity) != null, "startup building '%s' should expose proximity through component" % entity.call("get_source_instance_id"))
-			_expect(CapabilityResolverScript.get_interactable(entity) != null, "startup building '%s' should expose interaction availability through component" % entity.call("get_source_instance_id"))
+			_expect(entity.get_node_or_null("IdentityComponent") != null, "startup building '%s' should expose identity through component" % entity.call("get_source_instance_id"))
+			_expect(entity.get_node_or_null("PickableComponent") != null, "startup building '%s' should expose picking through component" % entity.call("get_source_instance_id"))
+			_expect(entity.get_node_or_null("SelectableComponent") != null, "startup building '%s' should expose selection through component" % entity.call("get_source_instance_id"))
+			_expect(entity.get_node_or_null("HighlightableComponent") != null, "startup building '%s' should expose highlighting through component" % entity.call("get_source_instance_id"))
+			_expect(entity.get_node_or_null("ProximityTargetComponent") != null, "startup building '%s' should expose proximity through component" % entity.call("get_source_instance_id"))
+			_expect(entity.get_node_or_null("InteractableComponent") != null, "startup building '%s' should expose interaction availability through component" % entity.call("get_source_instance_id"))
 
 	scene.queue_free()
 	await process_frame

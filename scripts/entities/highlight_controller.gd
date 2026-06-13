@@ -1,8 +1,6 @@
 class_name HighlightController
 extends Node
 
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
-
 const INPUT_SELECTED := &"selected"
 const INPUT_HOVERED := &"hovered"
 const INPUT_INTERACTABLE := &"interactable"
@@ -96,14 +94,14 @@ func set_highlight_input(building: Node, input_flag: StringName, enabled: bool) 
 	if not register_result.ok:
 		return register_result
 
-	var highlightable := CapabilityResolverScript.get_highlightable(building)
+	var highlightable := building.get_node_or_null("HighlightableComponent")
 	return highlightable.call("set_highlight_input", input_flag, enabled)
 
 
 func get_resolved_highlight_state(building: Node) -> StringName:
 	if building == null:
 		return STATE_DEFAULT
-	var highlightable := CapabilityResolverScript.get_highlightable(building)
+	var highlightable := building.get_node_or_null("HighlightableComponent")
 	if highlightable == null:
 		return STATE_DEFAULT
 	return highlightable.call("get_resolved_highlight_state")
@@ -128,7 +126,7 @@ func _register_current_buildings() -> void:
 func _ensure_registered(building: Node) -> Dictionary:
 	if building == null:
 		return _failure("HighlightController cannot register a null building.")
-	var highlightable := CapabilityResolverScript.get_highlightable(building)
+	var highlightable := building.get_node_or_null("HighlightableComponent")
 	if highlightable == null:
 		return _diagnose("HighlightController target '%s' has no HighlightableComponent." % _describe_building(building))
 	if not building.tree_exiting.is_connected(_on_registered_building_tree_exiting.bind(building)):
@@ -200,7 +198,7 @@ func _on_registered_building_tree_exiting(building: Node) -> void:
 func _describe_building(building: Node) -> String:
 	if building == null:
 		return "<null>"
-	var identity := CapabilityResolverScript.get_identity(building)
+	var identity := building.get_node_or_null("IdentityComponent")
 	if identity != null:
 		var entity_id := String(identity.call("get_entity_id"))
 		if not entity_id.is_empty():

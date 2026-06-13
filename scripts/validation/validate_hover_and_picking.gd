@@ -1,7 +1,6 @@
 extends SceneTree
 
 const MainScene := preload("res://scenes/main.tscn")
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
 const IdentityComponentScript := preload("res://scripts/entities/components/identity_component.gd")
 const PickableComponentScript := preload("res://scripts/entities/components/pickable_component.gd")
 const SelectableComponentScript := preload("res://scripts/entities/components/selectable_component.gd")
@@ -113,7 +112,7 @@ func _verify_main_scene_integration() -> void:
 		return
 
 	var target := entities[0]
-	var pickable := CapabilityResolverScript.get_pickable(target)
+	var pickable := target.get_node_or_null("PickableComponent")
 	_expect(pickable != null, "generated building should expose PickableComponent for picking validation")
 	if pickable == null:
 		scene.queue_free()
