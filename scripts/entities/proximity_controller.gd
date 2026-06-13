@@ -3,8 +3,6 @@ extends Node2D
 
 signal proximity_changed(snapshot: Dictionary)
 
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
-
 @export var proximity_radius := 82.0
 
 var _player: Node
@@ -111,7 +109,7 @@ func _update_proximity_state() -> void:
 	for building in _get_building_entities():
 		if not _building_has_required_contract(building):
 			continue
-		var proximity_target := CapabilityResolverScript.get_proximity_target(building)
+		var proximity_target := building.get_node_or_null("ProximityTargetComponent")
 		var world_rect: Rect2 = proximity_target.call("get_proximity_rect")
 		var distance := get_proximity_distance_to_rect(player_position, world_rect)
 		if distance <= proximity_radius:
@@ -157,8 +155,8 @@ func _get_building_entities() -> Array[Node]:
 
 func _building_has_required_contract(building: Node) -> bool:
 	return building != null \
-		and CapabilityResolverScript.get_proximity_target(building) != null \
-		and CapabilityResolverScript.get_identity(building) != null
+		and building.get_node_or_null("ProximityTargetComponent") != null \
+		and building.get_node_or_null("IdentityComponent") != null
 
 
 func _set_nearby_highlight(building: Node, enabled: bool) -> void:
@@ -177,7 +175,7 @@ func _get_nearby_entity_ids() -> Array[String]:
 
 
 func _get_entity_id(building: Node) -> String:
-	var identity := CapabilityResolverScript.get_identity(building)
+	var identity := building.get_node_or_null("IdentityComponent")
 	if identity != null:
 		return String(identity.call("get_entity_id"))
 	if building != null:

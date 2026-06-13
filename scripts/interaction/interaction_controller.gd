@@ -3,8 +3,6 @@ extends Node
 
 signal interaction_attempted(result: Dictionary)
 
-const CapabilityResolverScript := preload("res://scripts/entities/capability_resolver.gd")
-
 const OUTCOME_SUCCESS := &"success"
 const OUTCOME_NO_TARGET := &"no_target"
 const OUTCOME_NOT_INTERACTABLE := &"not_interactable"
@@ -51,7 +49,7 @@ func attempt_interaction(cursor_target: Variant = null) -> Dictionary:
 	if target == null:
 		return _emit_result(_build_result(OUTCOME_NO_TARGET, null, "No interaction target."))
 
-	var interactable := CapabilityResolverScript.get_interactable(target)
+	var interactable := target.get_node_or_null("InteractableComponent")
 	if interactable == null or not bool(interactable.call("is_interactable")):
 		_set_interactable_highlight(target, false)
 		return _emit_result(_build_result(
@@ -135,14 +133,14 @@ func _emit_result(result: Dictionary) -> Dictionary:
 
 
 func _get_entity_id(target: Node) -> String:
-	var identity := CapabilityResolverScript.get_identity(target)
+	var identity := target.get_node_or_null("IdentityComponent")
 	return String(identity.call("get_entity_id")) if identity != null else ""
 
 
 func _get_display_name(target: Node) -> String:
 	if target == null:
 		return ""
-	var identity := CapabilityResolverScript.get_identity(target)
+	var identity := target.get_node_or_null("IdentityComponent")
 	if identity != null:
 		var display_name := String(identity.call("get_display_name"))
 		if not display_name.is_empty():
