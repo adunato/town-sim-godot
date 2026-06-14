@@ -23,6 +23,11 @@ _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
 enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg", "res://addons/townsim_sprite_preview/plugin.cfg")
 
+[display]
+
+window/size/viewport_width=1600
+window/size/viewport_height=900
+
 [input]
 
 move_up={
