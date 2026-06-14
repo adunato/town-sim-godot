@@ -6,6 +6,18 @@ const TerrainCellScript := preload("res://scripts/terrain/terrain_cell.gd")
 const TerrainRendererScript := preload("res://scripts/terrain/terrain_renderer_2d.gd")
 
 const CONFIG_PATH := "res://data/terrain/prototype_terrain_config.json"
+const SAVED_HEIGHT_MAPS := [
+	{
+		"source": TerrainRendererScript.TERRAIN_TYPE_1_TEXTURE_PATH,
+		"raw_height": "res://assets/Textures/derived_height/mud_height_from_diffuse.png",
+		"contrast_preview": "res://assets/Textures/derived_height/mud_height_contrast_preview.png",
+	},
+	{
+		"source": TerrainRendererScript.TERRAIN_TYPE_2_TEXTURE_PATH,
+		"raw_height": "res://assets/Textures/derived_height/rocky_grass_height_from_diffuse.png",
+		"contrast_preview": "res://assets/Textures/derived_height/rocky_grass_height_contrast_preview.png",
+	},
+]
 
 var _failures: Array[String] = []
 
@@ -42,6 +54,7 @@ func _run_checks() -> void:
 	_expect(render_result.ok, "terrain renderer should configure height-aware terrain data: %s" % render_result.get("error", ""))
 	if render_result.ok:
 		_verify_height_route(renderer)
+		_verify_saved_height_maps()
 		_verify_shader_height_contract(renderer)
 		_verify_height_aware_boundary_behavior(renderer)
 		_verify_interior_stability(renderer)
@@ -72,6 +85,47 @@ func _verify_height_route(renderer: Node) -> void:
 		_expect(float(terrain_1_sample.value) >= 0.0 and float(terrain_1_sample.value) <= 1.0, "terrain_1 generated height sample should be normalized")
 	if terrain_2_sample.ok:
 		_expect(float(terrain_2_sample.value) >= 0.0 and float(terrain_2_sample.value) <= 1.0, "terrain_2 generated height sample should be normalized")
+
+
+func _verify_saved_height_maps() -> void:
+	for height_map: Dictionary in SAVED_HEIGHT_MAPS:
+		var source_path: String = height_map.source
+		var raw_height_path: String = height_map.raw_height
+		var contrast_preview_path: String = height_map.contrast_preview
+		_expect(FileAccess.file_exists(raw_height_path), "saved raw height map should exist: %s" % raw_height_path)
+		_expect(FileAccess.file_exists(contrast_preview_path), "saved contrast-preview height map should exist: %s" % contrast_preview_path)
+		if not FileAccess.file_exists(raw_height_path):
+			continue
+
+		var source_image := Image.new()
+		var source_load_result := source_image.load(source_path)
+		_expect(source_load_result == OK, "source diffuse texture should load for saved height validation: %s" % source_path)
+		var height_image := Image.new()
+		var height_load_result := height_image.load(raw_height_path)
+		_expect(height_load_result == OK, "saved raw height map should load: %s" % raw_height_path)
+		if source_load_result != OK or height_load_result != OK:
+			continue
+
+		_expect(height_image.get_size() == source_image.get_size(), "saved raw height map dimensions should match source texture for %s" % source_path)
+		_verify_saved_height_samples(source_image, height_image, raw_height_path)
+
+
+func _verify_saved_height_samples(source_image: Image, height_image: Image, height_path: String) -> void:
+	var sample_points := [
+		Vector2i(0, 0),
+		Vector2i(source_image.get_width() / 4, source_image.get_height() / 4),
+		Vector2i(source_image.get_width() / 2, source_image.get_height() / 2),
+		Vector2i((source_image.get_width() * 3) / 4, (source_image.get_height() * 3) / 4),
+		Vector2i(source_image.get_width() - 1, source_image.get_height() - 1),
+	]
+	for sample_point in sample_points:
+		var source_color := source_image.get_pixel(sample_point.x, sample_point.y)
+		var expected_luminance := source_color.r * 0.2126 + source_color.g * 0.7152 + source_color.b * 0.0722
+		var actual_height := height_image.get_pixel(sample_point.x, sample_point.y).r
+		_expect(
+			absf(expected_luminance - actual_height) <= 0.005,
+			"saved raw height map %s sample %s should match diffuse luminance, expected %.4f got %.4f" % [height_path, sample_point, expected_luminance, actual_height]
+		)
 
 
 func _verify_shader_height_contract(renderer: Node) -> void:
