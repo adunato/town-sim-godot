@@ -142,9 +142,9 @@ func _verify_renderer_continuity(renderer: Node) -> void:
 
 func _verify_invalid_height_settings_failure(renderer: Node) -> void:
 	var original_influence: float = renderer.get("height_blend_influence")
-	renderer.set("height_blend_influence", 1.5)
+	renderer.set("height_blend_influence", 3.5)
 	var validation: Dictionary = renderer.call("validate_height_settings")
-	_expect(not validation.ok, "terrain renderer validation should fail when height_blend_influence is outside 0.0 to 1.0")
+	_expect(not validation.ok, "terrain renderer validation should fail when height_blend_influence is outside 0.0 to 3.0")
 	_expect(String(validation.get("error", "")).contains("height_blend_influence"), "invalid height influence error should name height_blend_influence")
 	renderer.set("height_blend_influence", original_influence)
 

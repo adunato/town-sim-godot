@@ -13,8 +13,8 @@ const HEIGHT_ROUTE_GENERATED_FROM_DIFFUSE := "generated_from_diffuse_luminance"
 @export var terrain_type_2_texture: Texture2D
 @export_range(1.0, 1024.0, 1.0) var texture_repeat_world_size := 256.0
 @export_range(0.25, 8.0, 0.25) var blend_width_cells := 1.5
-@export_range(0.0, 1.0, 0.05) var height_blend_influence := 0.45
-@export_range(0.25, 4.0, 0.05) var height_blend_contrast := 1.5
+@export_range(0.0, 3.0, 0.05) var height_blend_influence := 1.75
+@export_range(0.25, 6.0, 0.05) var height_blend_contrast := 2.75
 
 var _terrain_data: RefCounted
 var _terrain_mask_texture: ImageTexture
@@ -245,8 +245,8 @@ func validate_blend_settings() -> Dictionary:
 
 
 func validate_height_settings() -> Dictionary:
-	if height_blend_influence < 0.0 or height_blend_influence > 1.0:
-		return _failure("TerrainRenderer2D height_blend_influence must be between 0.0 and 1.0.")
+	if height_blend_influence < 0.0 or height_blend_influence > 3.0:
+		return _failure("TerrainRenderer2D height_blend_influence must be between 0.0 and 3.0.")
 	if height_blend_contrast <= 0.0:
 		return _failure("TerrainRenderer2D height_blend_contrast must be positive.")
 
