@@ -45,6 +45,8 @@ func _run_checks() -> void:
 	_verify_generated_data_consumption(renderer, terrain_data)
 	_verify_geometry(renderer, config, terrain_data)
 	_verify_terrain_type_mapping(renderer, terrain_data)
+	_verify_mask_contract(renderer, terrain_data)
+	_verify_shader_surface_contract(renderer)
 	_verify_texture_repeat_mapping(renderer)
 	await _verify_startup_scene_runs()
 	_verify_missing_texture_failure(renderer)
@@ -88,6 +90,44 @@ func _verify_terrain_type_mapping(renderer: Node, terrain_data: RefCounted) -> v
 	_expect(renderer.call("get_texture_path_for_terrain_type", TerrainCellScript.TERRAIN_TYPE_2).ends_with("rocky_grass.png"), "terrain_2 should use rocky_grass.png")
 
 
+func _verify_mask_contract(renderer: Node, terrain_data: RefCounted) -> void:
+	var mask_texture: Texture2D = renderer.call("get_terrain_mask_texture")
+	_expect(mask_texture != null, "terrain renderer should generate a binary terrain mask texture")
+	_expect(renderer.call("get_terrain_mask_size") == Vector2i(terrain_data.grid_width, terrain_data.grid_height), "terrain mask dimensions should match generated terrain grid")
+	if mask_texture == null:
+		return
+
+	var mask_image := mask_texture.get_image()
+	for cell in terrain_data.cells:
+		var mask_value := mask_image.get_pixel(cell.coordinate.x, cell.coordinate.y).r
+		if cell.terrain_type == TerrainCellScript.TERRAIN_TYPE_1:
+			_expect(mask_value < 0.5, "terrain mask cell %s should identify terrain_1" % cell.coordinate)
+		elif cell.terrain_type == TerrainCellScript.TERRAIN_TYPE_2:
+			_expect(mask_value >= 0.5, "terrain mask cell %s should identify terrain_2" % cell.coordinate)
+
+	var sample_uv_result: Dictionary = renderer.call("get_cell_mask_uv_rect", Vector2i.ZERO)
+	_expect(sample_uv_result.ok, "terrain renderer should expose mask UV rect for cell (0, 0)")
+	if sample_uv_result.ok:
+		var expected_size := Vector2(1.0 / float(terrain_data.grid_width), 1.0 / float(terrain_data.grid_height))
+		_expect(sample_uv_result.rect.position == Vector2.ZERO, "cell (0, 0) mask UV rect should start at UV origin")
+		_expect(sample_uv_result.rect.size == expected_size, "cell mask UV rect size should match one terrain mask texel")
+
+
+func _verify_shader_surface_contract(renderer: Node) -> void:
+	_expect(renderer is Polygon2D, "terrain renderer should be one Polygon2D terrain draw surface")
+	_expect(renderer.call("get_draw_surface_count") == 1, "terrain renderer should expose one normal terrain draw surface")
+	_expect(renderer.call("uses_shader_material"), "terrain renderer should use a ShaderMaterial")
+	_expect(renderer.get("polygon").size() == 4, "terrain renderer polygon should use one terrain-sized quad")
+	_expect(renderer.get("material") != null, "terrain renderer should assign its shader material")
+	_expect(renderer.call("get_shader_parameter_value", &"terrain_type_1_texture") != null, "terrain shader should receive terrain_1 texture")
+	_expect(renderer.call("get_shader_parameter_value", &"terrain_type_2_texture") != null, "terrain shader should receive terrain_2 texture")
+	_expect(renderer.call("get_shader_parameter_value", &"terrain_mask") != null, "terrain shader should receive terrain mask")
+
+	var renderer_script_text := FileAccess.get_file_as_string("res://scripts/terrain/terrain_renderer_2d.gd")
+	_expect(not renderer_script_text.contains("func _draw("), "terrain renderer should not implement per-cell custom _draw rendering")
+	_expect(not renderer_script_text.contains("draw_texture_rect"), "terrain renderer should not issue per-cell texture draw calls")
+
+
 func _verify_texture_repeat_mapping(renderer: Node) -> void:
 	var rect := Rect2(Vector2(32, 64), Vector2(32, 32))
 	var first_region: Rect2 = renderer.call("get_texture_region_for_rect", rect)
@@ -105,8 +145,10 @@ func _verify_startup_scene_runs() -> void:
 	_expect(scene.has_node("World/Terrain"), "main scene should contain World/Terrain terrain renderer")
 	var terrain := scene.get_node("World/Terrain")
 	_expect(terrain.get_script() == TerrainRendererScript, "World/Terrain should use terrain_renderer_2d.gd")
+	_expect(terrain is Polygon2D, "World/Terrain should be a Polygon2D shader surface")
 	_expect(terrain.call("has_terrain_data"), "startup scene terrain renderer should have generated terrain data")
 	_expect(terrain.call("get_rendered_cell_count") > 0, "startup scene terrain renderer should expose generated terrain cells")
+	_expect(terrain.call("get_draw_surface_count") == 1, "startup scene terrain renderer should use one draw surface")
 	_expect(terrain.z_index > scene.get_node("World/Map").z_index, "terrain renderer should draw above the prototype map background")
 	_expect(terrain.z_index < scene.get_node("World/DebugOverlay").z_index, "terrain renderer should draw below the debug overlay")
 

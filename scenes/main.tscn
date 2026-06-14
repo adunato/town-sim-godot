@@ -19,7 +19,7 @@ script = ExtResource("1_ojyr8")
 
 [node name="World" type="Node2D" parent="."]
 
-[node name="Terrain" type="Node2D" parent="World"]
+[node name="Terrain" type="Polygon2D" parent="World"]
 script = ExtResource("2_0r6qx")
 
 [node name="Map" type="Node2D" parent="World"]
