@@ -1,6 +1,7 @@
-[gd_scene load_steps=13 format=3 uid="uid://bwp1sm7h7h3ua"]
+[gd_scene load_steps=14 format=3 uid="uid://bwp1sm7h7h3ua"]
 
 [ext_resource type="Script" path="res://scripts/main.gd" id="1_ojyr8"]
+[ext_resource type="Script" path="res://scripts/terrain/terrain_renderer_2d.gd" id="2_0r6qx"]
 [ext_resource type="Script" path="res://scripts/map/map_renderer.gd" id="2_4f5q0"]
 [ext_resource type="Script" path="res://scripts/buildings/building_entity_spawner.gd" id="3_b3h4i"]
 [ext_resource type="Script" path="res://scripts/debug/debug_overlay.gd" id="2_abm7f"]
@@ -17,6 +18,9 @@
 script = ExtResource("1_ojyr8")
 
 [node name="World" type="Node2D" parent="."]
+
+[node name="Terrain" type="Node2D" parent="World"]
+script = ExtResource("2_0r6qx")
 
 [node name="Map" type="Node2D" parent="World"]
 script = ExtResource("2_4f5q0")

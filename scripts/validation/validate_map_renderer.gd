@@ -51,7 +51,8 @@ func _verify_scene_ownership() -> void:
 	_expect(scene.has_node("World/Map"), "main scene should contain World/Map renderer")
 	_expect(scene.get_node("World/Map").get_script() == MapRendererScript, "World/Map should use map_renderer.gd")
 	_expect(scene.get_node("World/Map").has_node("TerrainTileMapLayer"), "World/Map should own TerrainTileMapLayer")
-	_expect(scene.get_node("World").get_child(0).name == "Map", "Map renderer should be the first World child")
+	_expect(scene.get_node("World").get_child(0).name == "Terrain", "Terrain renderer should be the first World child")
+	_expect(scene.get_node("World").get_child(1).name == "Map", "Map renderer should follow the terrain renderer")
 	_expect(scene.get_node("World/Map").z_index < scene.get_node("World/DebugOverlay").z_index, "Map renderer should draw below DebugOverlay")
 
 	scene.queue_free()

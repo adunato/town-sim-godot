@@ -2,8 +2,10 @@ extends Node
 
 const GridMapModelScript := preload("res://scripts/map/grid_map_model.gd")
 const BuildingDataRegistryScript := preload("res://scripts/buildings/building_data_registry.gd")
+const TerrainGeneratorScript := preload("res://scripts/terrain/terrain_generator.gd")
 
 @onready var _debug_overlay := $World/DebugOverlay
+@onready var _terrain_renderer := $World/Terrain
 @onready var _map_renderer := $World/Map
 @onready var _player := $World/Player
 @onready var _buildings := $World/Buildings
@@ -30,6 +32,7 @@ func _ready() -> void:
 		push_error(load_result.error)
 		return
 
+	_configure_terrain()
 	_map_renderer.set_map_model(_map_model)
 	_configure_building_entities()
 	_configure_picking()
@@ -45,6 +48,18 @@ func _ready() -> void:
 	_debug_overlay.debug_state_changed.connect(_game_hud.set_debug_state)
 	_debug_readout.set_overlay_state(_debug_overlay.is_overlay_enabled(), _debug_overlay.current_mode, _debug_overlay.get_legend_entries())
 	_game_hud.set_debug_state(_debug_overlay.is_overlay_enabled(), _debug_overlay.current_mode, _debug_overlay.get_legend_entries())
+
+
+func _configure_terrain() -> void:
+	var generator := TerrainGeneratorScript.new()
+	var generate_result: Dictionary = generator.load_and_generate()
+	if not generate_result.ok:
+		push_error("Unable to configure terrain renderer: %s" % generate_result.error)
+		return
+
+	var render_result: Dictionary = _terrain_renderer.set_terrain_data(generate_result.terrain_data)
+	if not render_result.ok:
+		push_error("Unable to configure terrain renderer: %s" % render_result.error)
 
 
 func _configure_building_entities() -> void:
