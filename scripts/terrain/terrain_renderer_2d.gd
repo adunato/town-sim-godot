@@ -6,10 +6,12 @@ const TerrainCellScript := preload("res://scripts/terrain/terrain_cell.gd")
 const TERRAIN_TYPE_1_TEXTURE_PATH := "res://assets/Textures/mud.png"
 const TERRAIN_TYPE_2_TEXTURE_PATH := "res://assets/Textures/rocky_grass.png"
 const TERRAIN_SHADER_PATH := "res://shaders/terrain/terrain_binary_mask.gdshader"
+const MASK_PIXELS_PER_CELL := 8
 
 @export var terrain_type_1_texture: Texture2D
 @export var terrain_type_2_texture: Texture2D
 @export_range(1.0, 1024.0, 1.0) var texture_repeat_world_size := 256.0
+@export_range(0.25, 8.0, 0.25) var blend_width_cells := 1.5
 
 var _terrain_data: RefCounted
 var _terrain_mask_texture: ImageTexture
@@ -39,7 +41,11 @@ func set_terrain_data(terrain_data: RefCounted) -> Dictionary:
 	if not texture_validation.ok:
 		return texture_validation
 
-	var mask_result := _build_binary_mask_texture()
+	var blend_validation := validate_blend_settings()
+	if not blend_validation.ok:
+		return blend_validation
+
+	var mask_result := _build_blend_mask_texture()
 	if not mask_result.ok:
 		return mask_result
 
@@ -85,6 +91,22 @@ func get_terrain_mask_size() -> Vector2i:
 		return Vector2i.ZERO
 
 	return _terrain_mask_texture.get_size()
+
+
+func get_terrain_mask_value(cell: Vector2i) -> Dictionary:
+	if _terrain_mask_texture == null:
+		return _failure("TerrainRenderer2D has no generated terrain blend mask.")
+	if _terrain_data == null:
+		return _failure("TerrainRenderer2D has no generated terrain data.")
+	if not _terrain_data.is_cell_in_bounds(cell):
+		return _failure("Terrain cell %s is outside terrain bounds." % cell)
+
+	var mask_image := _terrain_mask_texture.get_image()
+	var sample_pixel := Vector2i(
+		cell.x * MASK_PIXELS_PER_CELL + MASK_PIXELS_PER_CELL / 2,
+		cell.y * MASK_PIXELS_PER_CELL + MASK_PIXELS_PER_CELL / 2
+	)
+	return _success({"value": mask_image.get_pixel(sample_pixel.x, sample_pixel.y).r})
 
 
 func get_cell_draw_rect(cell: Vector2i) -> Dictionary:
@@ -152,6 +174,13 @@ func validate_texture_inputs(load_defaults := true) -> Dictionary:
 	return _success()
 
 
+func validate_blend_settings() -> Dictionary:
+	if blend_width_cells <= 0.0:
+		return _failure("TerrainRenderer2D blend_width_cells must be positive.")
+
+	return _success()
+
+
 func _configure_surface_geometry() -> void:
 	position = _surface_bounds.position
 	color = Color.WHITE
@@ -186,22 +215,102 @@ func _configure_shader_parameters() -> Dictionary:
 	return _success()
 
 
-func _build_binary_mask_texture() -> Dictionary:
+func _build_blend_mask_texture() -> Dictionary:
 	if _terrain_data == null:
-		return _failure("TerrainRenderer2D requires terrain data before building a terrain mask.")
+		return _failure("TerrainRenderer2D requires terrain data before building a terrain blend mask.")
 
-	var image := Image.create(_terrain_data.grid_width, _terrain_data.grid_height, false, Image.FORMAT_RGBA8)
+	var image := Image.create(
+		_terrain_data.grid_width * MASK_PIXELS_PER_CELL,
+		_terrain_data.grid_height * MASK_PIXELS_PER_CELL,
+		false,
+		Image.FORMAT_RGBA8
+	)
+	var terrain_types_by_coordinate := {}
 	for cell in _terrain_data.cells:
-		var mask_value := 0.0
-		if cell.terrain_type == TerrainCellScript.TERRAIN_TYPE_2:
-			mask_value = 1.0
-		elif cell.terrain_type != TerrainCellScript.TERRAIN_TYPE_1:
+		if not TerrainCellScript.is_known_terrain_type(cell.terrain_type):
 			return _failure("TerrainRenderer2D cannot build mask for unknown terrain type '%s' at %s." % [cell.terrain_type, cell.coordinate])
+		terrain_types_by_coordinate[cell.coordinate] = cell.terrain_type
 
-		image.set_pixel(cell.coordinate.x, cell.coordinate.y, Color(mask_value, mask_value, mask_value, 1.0))
+	for cell in _terrain_data.cells:
+		_write_cell_blend_mask(image, cell.coordinate, terrain_types_by_coordinate)
 
 	_terrain_mask_texture = ImageTexture.create_from_image(image)
 	return _success()
+
+
+func _write_cell_blend_mask(image: Image, cell_coordinate: Vector2i, terrain_types_by_coordinate: Dictionary) -> void:
+	var base_value := _mask_value_for_terrain_type(terrain_types_by_coordinate.get(cell_coordinate, TerrainCellScript.TERRAIN_TYPE_1))
+	var edge_blend_width: float = clamp(blend_width_cells * 0.35, 0.125, 0.5)
+	var has_left_boundary := _is_opposite_terrain(cell_coordinate + Vector2i.LEFT, base_value, terrain_types_by_coordinate)
+	var has_right_boundary := _is_opposite_terrain(cell_coordinate + Vector2i.RIGHT, base_value, terrain_types_by_coordinate)
+	var has_top_boundary := _is_opposite_terrain(cell_coordinate + Vector2i.UP, base_value, terrain_types_by_coordinate)
+	var has_bottom_boundary := _is_opposite_terrain(cell_coordinate + Vector2i.DOWN, base_value, terrain_types_by_coordinate)
+	var first_x_pixel := cell_coordinate.x * MASK_PIXELS_PER_CELL
+	var first_y_pixel := cell_coordinate.y * MASK_PIXELS_PER_CELL
+
+	for y_offset in range(MASK_PIXELS_PER_CELL):
+		var y_position := (float(y_offset) + 0.5) / float(MASK_PIXELS_PER_CELL)
+		for x_offset in range(MASK_PIXELS_PER_CELL):
+			var x_position := (float(x_offset) + 0.5) / float(MASK_PIXELS_PER_CELL)
+			var nearest_boundary_distance := _nearest_cell_boundary_distance(
+				x_position,
+				y_position,
+				has_left_boundary,
+				has_right_boundary,
+				has_top_boundary,
+				has_bottom_boundary
+			)
+			var mask_value := base_value
+			if nearest_boundary_distance >= 0.0:
+				var base_weight := smoothstep(0.0, edge_blend_width, nearest_boundary_distance)
+				mask_value = lerpf(0.5, base_value, base_weight)
+			image.set_pixel(
+				first_x_pixel + x_offset,
+				first_y_pixel + y_offset,
+				Color(mask_value, mask_value, mask_value, 1.0)
+			)
+
+
+func _is_opposite_terrain(neighbor_coordinate: Vector2i, base_value: float, terrain_types_by_coordinate: Dictionary) -> bool:
+	if not _terrain_data.is_cell_in_bounds(neighbor_coordinate):
+		return false
+
+	var neighbor_value := _mask_value_for_terrain_type(terrain_types_by_coordinate.get(neighbor_coordinate, TerrainCellScript.TERRAIN_TYPE_1))
+	return not is_equal_approx(neighbor_value, base_value)
+
+
+func _nearest_cell_boundary_distance(
+	x_position: float,
+	y_position: float,
+	has_left_boundary: bool,
+	has_right_boundary: bool,
+	has_top_boundary: bool,
+	has_bottom_boundary: bool
+) -> float:
+	var nearest_distance := -1.0
+	if has_left_boundary:
+		nearest_distance = x_position
+	if has_right_boundary:
+		nearest_distance = _min_boundary_distance(nearest_distance, 1.0 - x_position)
+	if has_top_boundary:
+		nearest_distance = _min_boundary_distance(nearest_distance, y_position)
+	if has_bottom_boundary:
+		nearest_distance = _min_boundary_distance(nearest_distance, 1.0 - y_position)
+
+	return nearest_distance
+
+
+func _min_boundary_distance(current_distance: float, candidate_distance: float) -> float:
+	if current_distance < 0.0:
+		return candidate_distance
+	return minf(current_distance, candidate_distance)
+
+
+func _mask_value_for_terrain_type(terrain_type: String) -> float:
+	if terrain_type == TerrainCellScript.TERRAIN_TYPE_2:
+		return 1.0
+
+	return 0.0
 
 
 func _ensure_shader_material() -> void:

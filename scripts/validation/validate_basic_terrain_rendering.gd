@@ -46,10 +46,12 @@ func _run_checks() -> void:
 	_verify_geometry(renderer, config, terrain_data)
 	_verify_terrain_type_mapping(renderer, terrain_data)
 	_verify_mask_contract(renderer, terrain_data)
+	_verify_blend_mask_determinism(terrain_data, renderer)
 	_verify_shader_surface_contract(renderer)
 	_verify_texture_repeat_mapping(renderer)
 	await _verify_startup_scene_runs()
 	_verify_missing_texture_failure(renderer)
+	_verify_invalid_blend_width_failure(renderer)
 
 	renderer.queue_free()
 	await process_frame
@@ -92,18 +94,31 @@ func _verify_terrain_type_mapping(renderer: Node, terrain_data: RefCounted) -> v
 
 func _verify_mask_contract(renderer: Node, terrain_data: RefCounted) -> void:
 	var mask_texture: Texture2D = renderer.call("get_terrain_mask_texture")
-	_expect(mask_texture != null, "terrain renderer should generate a binary terrain mask texture")
-	_expect(renderer.call("get_terrain_mask_size") == Vector2i(terrain_data.grid_width, terrain_data.grid_height), "terrain mask dimensions should match generated terrain grid")
+	_expect(mask_texture != null, "terrain renderer should generate a softened terrain blend mask texture")
+	var expected_mask_size := Vector2i(
+		terrain_data.grid_width * TerrainRendererScript.MASK_PIXELS_PER_CELL,
+		terrain_data.grid_height * TerrainRendererScript.MASK_PIXELS_PER_CELL
+	)
+	_expect(renderer.call("get_terrain_mask_size") == expected_mask_size, "terrain blend mask dimensions should scale from generated terrain grid")
 	if mask_texture == null:
 		return
 
 	var mask_image := mask_texture.get_image()
+	var terrain_1_region_count := 0
+	var terrain_2_region_count := 0
 	for cell in terrain_data.cells:
-		var mask_value := mask_image.get_pixel(cell.coordinate.x, cell.coordinate.y).r
+		var lookup_result: Dictionary = renderer.call("get_terrain_mask_value", cell.coordinate)
+		_expect(lookup_result.ok, "terrain renderer should expose blend mask value for generated cell %s: %s" % [cell.coordinate, lookup_result.get("error", "")])
+		var mask_value := 0.0
+		if lookup_result.ok:
+			mask_value = float(lookup_result.value)
+
 		if cell.terrain_type == TerrainCellScript.TERRAIN_TYPE_1:
-			_expect(mask_value < 0.5, "terrain mask cell %s should identify terrain_1" % cell.coordinate)
+			_expect(mask_value < 0.5, "terrain blend mask cell %s should identify terrain_1" % cell.coordinate)
+			terrain_1_region_count += 1
 		elif cell.terrain_type == TerrainCellScript.TERRAIN_TYPE_2:
-			_expect(mask_value >= 0.5, "terrain mask cell %s should identify terrain_2" % cell.coordinate)
+			_expect(mask_value >= 0.5, "terrain blend mask cell %s should identify terrain_2" % cell.coordinate)
+			terrain_2_region_count += 1
 
 	var sample_uv_result: Dictionary = renderer.call("get_cell_mask_uv_rect", Vector2i.ZERO)
 	_expect(sample_uv_result.ok, "terrain renderer should expose mask UV rect for cell (0, 0)")
@@ -111,6 +126,49 @@ func _verify_mask_contract(renderer: Node, terrain_data: RefCounted) -> void:
 		var expected_size := Vector2(1.0 / float(terrain_data.grid_width), 1.0 / float(terrain_data.grid_height))
 		_expect(sample_uv_result.rect.position == Vector2.ZERO, "cell (0, 0) mask UV rect should start at UV origin")
 		_expect(sample_uv_result.rect.size == expected_size, "cell mask UV rect size should match one terrain mask texel")
+
+	_expect(terrain_1_region_count > 0, "terrain blend mask should include terrain_1 region values")
+	_expect(terrain_2_region_count > 0, "terrain blend mask should include terrain_2 region values")
+	_expect(_mask_has_transition_pixels(mask_image), "terrain blend mask should include intermediate transition values near terrain boundaries")
+
+
+func _mask_has_transition_pixels(mask_image: Image) -> bool:
+	for y in range(mask_image.get_height()):
+		for x in range(mask_image.get_width()):
+			var mask_value := mask_image.get_pixel(x, y).r
+			if mask_value > 0.0 and mask_value < 1.0:
+				return true
+
+	return false
+
+
+func _verify_blend_mask_determinism(terrain_data: RefCounted, renderer: Node) -> void:
+	var second_renderer := TerrainRendererScript.new()
+	second_renderer.set("blend_width_cells", renderer.get("blend_width_cells"))
+	get_root().add_child(second_renderer)
+	var second_result: Dictionary = second_renderer.call("set_terrain_data", terrain_data)
+	_expect(second_result.ok, "second terrain renderer should generate deterministic blend mask: %s" % second_result.get("error", ""))
+	if not second_result.ok:
+		second_renderer.queue_free()
+		return
+
+	var first_mask: Texture2D = renderer.call("get_terrain_mask_texture")
+	var second_mask: Texture2D = second_renderer.call("get_terrain_mask_texture")
+	_expect(first_mask != null and second_mask != null, "deterministic blend mask comparison should have two generated masks")
+	if first_mask != null and second_mask != null:
+		var first_image := first_mask.get_image()
+		var second_image := second_mask.get_image()
+		_expect(first_image.get_size() == second_image.get_size(), "deterministic blend masks should have matching dimensions")
+		for cell in terrain_data.cells:
+			var sample_pixel := Vector2i(
+				cell.coordinate.x * TerrainRendererScript.MASK_PIXELS_PER_CELL + TerrainRendererScript.MASK_PIXELS_PER_CELL / 2,
+				cell.coordinate.y * TerrainRendererScript.MASK_PIXELS_PER_CELL + TerrainRendererScript.MASK_PIXELS_PER_CELL / 2
+			)
+			var first_value := first_image.get_pixel(sample_pixel.x, sample_pixel.y).r
+			var second_value := second_image.get_pixel(sample_pixel.x, sample_pixel.y).r
+			_expect(is_equal_approx(first_value, second_value), "deterministic blend mask mismatch at cell %s" % cell.coordinate)
+
+	second_renderer.queue_free()
 
 
 func _verify_shader_surface_contract(renderer: Node) -> void:
@@ -121,7 +179,7 @@ func _verify_shader_surface_contract(renderer: Node) -> void:
 	_expect(renderer.get("material") != null, "terrain renderer should assign its shader material")
 	_expect(renderer.call("get_shader_parameter_value", &"terrain_type_1_texture") != null, "terrain shader should receive terrain_1 texture")
 	_expect(renderer.call("get_shader_parameter_value", &"terrain_type_2_texture") != null, "terrain shader should receive terrain_2 texture")
-	_expect(renderer.call("get_shader_parameter_value", &"terrain_mask") != null, "terrain shader should receive terrain mask")
+	_expect(renderer.call("get_shader_parameter_value", &"terrain_mask") != null, "terrain shader should receive terrain blend mask")
 
 	var renderer_script_text := FileAccess.get_file_as_string("res://scripts/terrain/terrain_renderer_2d.gd")
 	_expect(not renderer_script_text.contains("func _draw("), "terrain renderer should not implement per-cell custom _draw rendering")
@@ -164,6 +222,15 @@ func _verify_missing_texture_failure(renderer: Node) -> void:
 	_expect(not validation.ok, "terrain renderer validation should fail when terrain_1 texture is missing")
 	_expect(String(validation.get("error", "")).contains("terrain_1"), "missing terrain texture error should name terrain_1")
 	renderer.set("terrain_type_1_texture", original_texture)
+
+
+func _verify_invalid_blend_width_failure(renderer: Node) -> void:
+	var original_blend_width: float = renderer.get("blend_width_cells")
+	renderer.set("blend_width_cells", 0.0)
+	var validation: Dictionary = renderer.call("validate_blend_settings")
+	_expect(not validation.ok, "terrain renderer validation should fail when blend_width_cells is not positive")
+	_expect(String(validation.get("error", "")).contains("blend_width_cells"), "invalid blend width error should name blend_width_cells")
+	renderer.set("blend_width_cells", original_blend_width)
 
 
 func _expect(condition: bool, message: String) -> void:
