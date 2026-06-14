@@ -9,7 +9,7 @@ const TERRAIN_SHADER_PATH := "res://shaders/terrain/terrain_binary_mask.gdshader
 
 @export var terrain_type_1_texture: Texture2D
 @export var terrain_type_2_texture: Texture2D
-@export_range(1.0, 512.0, 1.0) var texture_repeat_world_size := 128.0
+@export_range(1.0, 1024.0, 1.0) var texture_repeat_world_size := 256.0
 
 var _terrain_data: RefCounted
 var _terrain_mask_texture: ImageTexture

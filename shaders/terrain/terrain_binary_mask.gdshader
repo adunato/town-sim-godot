@@ -6,7 +6,7 @@ uniform sampler2D terrain_type_2_texture : filter_linear, repeat_enable;
 uniform sampler2D terrain_mask : filter_nearest, repeat_disable;
 uniform vec2 terrain_world_origin = vec2(0.0, 0.0);
 uniform vec2 terrain_world_size = vec2(1.0, 1.0);
-uniform float texture_repeat_world_size = 128.0;
+uniform float texture_repeat_world_size = 256.0;
 
 varying vec2 terrain_local_position;
 
