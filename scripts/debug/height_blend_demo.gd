@@ -22,8 +22,8 @@ func _ready() -> void:
 		HEIGHT_BLEND_INFLUENCE,
 		HEIGHT_BLEND_CONTRAST
 	)
-	_create_height_preview("Material A height", Vector2(1080.0, 150.0), true)
-	_create_height_preview("Material B height", Vector2(1080.0, 470.0), false)
+	_create_height_preview("Material A height: circles", Vector2(1080.0, 150.0), true)
+	_create_height_preview("Material B height: squares", Vector2(1080.0, 470.0), false)
 
 
 func _create_camera() -> void:
@@ -114,20 +114,20 @@ func _build_demo_mask() -> Texture2D:
 
 
 func _height_pattern(pixel: Vector2i, is_material_a: bool) -> float:
-	var checker := ((pixel.x / 18 + pixel.y / 18) % 2) == 0
-	var diagonal := absf(float((pixel.x + pixel.y) % 48) - 24.0) < 8.0
-	var circle_center := Vector2(64.0, 64.0)
-	var circle := Vector2(pixel).distance_to(circle_center) < 34.0
-	var high := checker or diagonal or circle
-	if not is_material_a:
-		high = not high
-	return 1.0 if high else 0.0
+	var tile_origin := Vector2i((pixel.x / 32) * 32, (pixel.y / 32) * 32)
+	var local_position := pixel - tile_origin
+	if is_material_a:
+		var circle_center := Vector2(16.0, 16.0)
+		return 1.0 if Vector2(local_position).distance_to(circle_center) <= 10.0 else 0.0
+
+	var is_square := local_position.x >= 7 and local_position.x <= 24 and local_position.y >= 7 and local_position.y <= 24
+	return 1.0 if is_square else 0.0
 
 
 func _create_height_preview(label_text: String, position: Vector2, is_material_a: bool) -> void:
 	_create_label(label_text, position + Vector2(-96.0, -140.0), 18)
 	var preview := Sprite2D.new()
-	preview.name = label_text.replace(" ", "")
+	preview.name = label_text.replace(" ", "").replace(":", "")
 	preview.position = position
 	preview.texture = _build_height_texture(is_material_a)
 	preview.scale = Vector2(1.75, 1.75)
@@ -137,8 +137,8 @@ func _create_height_preview(label_text: String, position: Vector2, is_material_a
 func _create_tile_boundary_marks(position: Vector2) -> void:
 	var left_label_position := position + Vector2(80.0, SURFACE_SIZE.y + 12.0)
 	var right_label_position := position + Vector2(SURFACE_SIZE.x - 190.0, SURFACE_SIZE.y + 12.0)
-	_create_label("Material A tile", left_label_position, 16)
-	_create_label("Material B tile", right_label_position, 16)
+	_create_label("Material A tile: circles are high", left_label_position, 16)
+	_create_label("Material B tile: squares are high", right_label_position, 16)
 
 
 func _create_label(text: String, position: Vector2, font_size: int) -> void:
