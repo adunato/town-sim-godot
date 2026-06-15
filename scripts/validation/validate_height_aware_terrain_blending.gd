@@ -205,9 +205,11 @@ func _verify_invalid_height_settings_failure(renderer: Node) -> void:
 func _verify_live_height_setting_updates(renderer: Node) -> void:
 	var original_influence: float = renderer.get("height_blend_influence")
 	var original_contrast: float = renderer.get("height_blend_contrast")
+	var original_material := renderer.get("material") as ShaderMaterial
 
 	renderer.set("height_blend_influence", 0.35)
 	renderer.set("height_blend_contrast", 2.25)
+	var active_material := renderer.get("material") as ShaderMaterial
 	_expect(
 		is_equal_approx(float(renderer.call("get_shader_parameter_value", &"height_blend_influence")), 0.35),
 		"changing height_blend_influence at runtime should update the shader parameter"
@@ -216,6 +218,30 @@ func _verify_live_height_setting_updates(renderer: Node) -> void:
 		is_equal_approx(float(renderer.call("get_shader_parameter_value", &"height_blend_contrast")), 2.25),
 		"changing height_blend_contrast at runtime should update the shader parameter"
 	)
+	_expect(
+		active_material != null and is_equal_approx(float(active_material.get_shader_parameter(&"height_blend_influence")), 0.35),
+		"changing height_blend_influence at runtime should update the active Polygon2D material"
+	)
+	_expect(
+		active_material != null and is_equal_approx(float(active_material.get_shader_parameter(&"height_blend_contrast")), 2.25),
+		"changing height_blend_contrast at runtime should update the active Polygon2D material"
+	)
+
+	if original_material != null:
+		var replacement_material := ShaderMaterial.new()
+		replacement_material.shader = original_material.shader
+		renderer.set("material", replacement_material)
+		renderer.set("height_blend_influence", 1.8)
+		renderer.set("height_blend_contrast", 4.0)
+		_expect(
+			is_equal_approx(float(replacement_material.get_shader_parameter(&"height_blend_influence")), 1.8),
+			"live height_blend_influence updates should target a replaced active material"
+		)
+		_expect(
+			is_equal_approx(float(replacement_material.get_shader_parameter(&"height_blend_contrast")), 4.0),
+			"live height_blend_contrast updates should target a replaced active material"
+		)
+		renderer.set("material", original_material)
 
 	renderer.set("height_blend_influence", original_influence)
 	renderer.set("height_blend_contrast", original_contrast)

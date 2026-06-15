@@ -315,8 +315,8 @@ func _configure_shader_parameters() -> Dictionary:
 	_terrain_material.set_shader_parameter("terrain_world_origin", _surface_bounds.position)
 	_terrain_material.set_shader_parameter("terrain_world_size", _surface_bounds.size)
 	_terrain_material.set_shader_parameter("texture_repeat_world_size", texture_repeat_world_size)
-	_sync_height_blend_shader_parameters()
 	material = _terrain_material
+	_sync_height_blend_shader_parameters()
 	return _success()
 
 
@@ -354,13 +354,25 @@ func _ensure_shader_material() -> void:
 
 
 func _sync_height_blend_shader_parameters() -> void:
-	if _terrain_material == null and material is ShaderMaterial:
-		_terrain_material = material
-	if _terrain_material == null:
+	var active_material := material as ShaderMaterial
+	if _terrain_material == null and active_material != null:
+		_terrain_material = active_material
+
+	if _terrain_material == null and active_material == null:
 		return
 
-	_terrain_material.set_shader_parameter("height_blend_influence", _height_blend_influence)
-	_terrain_material.set_shader_parameter("height_blend_contrast", _height_blend_contrast)
+	_apply_height_blend_shader_parameters(_terrain_material)
+	if active_material != _terrain_material:
+		_apply_height_blend_shader_parameters(active_material)
+	queue_redraw()
+
+
+func _apply_height_blend_shader_parameters(shader_material: ShaderMaterial) -> void:
+	if shader_material == null:
+		return
+
+	shader_material.set_shader_parameter("height_blend_influence", _height_blend_influence)
+	shader_material.set_shader_parameter("height_blend_contrast", _height_blend_contrast)
 
 
 func _load_default_materials() -> void:
