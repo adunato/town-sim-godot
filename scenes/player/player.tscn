@@ -15,4 +15,4 @@ shape = SubResource("CircleShape2D_8n65a")
 
 [node name="PlayerCamera" type="Camera2D" parent="."]
 script = ExtResource("2_7e8ur")
-initial_zoom = Vector2(1.6, 1.6)
+initial_zoom = Vector2(3.2, 3.2)
