@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "height_brightness_convention": "brighter_is_higher",
+  "texture_repeat_world_size": 256.0,
+  "height_blend": {
+    "influence": 1.2,
+    "contrast": 2.1
+  },
+  "materials": [
+    {
+      "id": "mud",
+      "terrain_type": "terrain_1",
+      "diffuse_texture": "res://assets/Textures/mud.png",
+      "height_texture": "res://assets/Textures/mud_height.png",
+      "expected_size": {
+        "width": 1254,
+        "height": 1254
+      }
+    },
+    {
+      "id": "rocky_grass",
+      "terrain_type": "terrain_2",
+      "diffuse_texture": "res://assets/Textures/rocky_grass.png",
+      "height_texture": "res://assets/Textures/rocky_grass_height.png",
+      "expected_size": {
+        "width": 1254,
+        "height": 1254
+      }
+    }
+  ]
+}

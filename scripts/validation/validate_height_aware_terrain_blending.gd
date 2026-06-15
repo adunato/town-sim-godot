@@ -4,18 +4,9 @@ const TerrainConfigScript := preload("res://scripts/terrain/terrain_config.gd")
 const TerrainGeneratorScript := preload("res://scripts/terrain/terrain_generator.gd")
 const TerrainCellScript := preload("res://scripts/terrain/terrain_cell.gd")
 const TerrainRendererScript := preload("res://scripts/terrain/terrain_renderer_2d.gd")
+const TerrainMaterialCatalogScript := preload("res://scripts/terrain/terrain_material_catalog.gd")
 
 const CONFIG_PATH := "res://data/terrain/prototype_terrain_config.json"
-const AUTHORED_HEIGHT_MAPS := [
-	{
-		"path": TerrainRendererScript.TERRAIN_TYPE_1_HEIGHT_TEXTURE_PATH,
-		"terrain_type": TerrainCellScript.TERRAIN_TYPE_1,
-	},
-	{
-		"path": TerrainRendererScript.TERRAIN_TYPE_2_HEIGHT_TEXTURE_PATH,
-		"terrain_type": TerrainCellScript.TERRAIN_TYPE_2,
-	},
-]
 
 var _failures: Array[String] = []
 
@@ -66,8 +57,8 @@ func _run_checks() -> void:
 
 
 func _verify_height_route(renderer: Node) -> void:
-	_expect(renderer.call("get_height_input_route") == TerrainRendererScript.HEIGHT_ROUTE_AUTHORED_TEXTURES, "height route should use authored texture maps")
-	_expect(renderer.call("get_height_brightness_convention") == "authored_height_map_brighter_is_higher", "height brightness convention should document brighter texels as higher")
+	_expect(renderer.call("get_height_input_route") == TerrainMaterialCatalogScript.HEIGHT_ROUTE_AUTHORED_TEXTURES, "height route should use authored texture maps")
+	_expect(renderer.call("get_height_brightness_convention") == "brighter_is_higher", "height brightness convention should document brighter texels as higher")
 
 	var terrain_1_height: Texture2D = renderer.call("get_terrain_height_texture", TerrainCellScript.TERRAIN_TYPE_1)
 	var terrain_2_height: Texture2D = renderer.call("get_terrain_height_texture", TerrainCellScript.TERRAIN_TYPE_2)
@@ -87,9 +78,15 @@ func _verify_height_route(renderer: Node) -> void:
 
 
 func _verify_authored_height_maps(renderer: Node) -> void:
-	for height_map: Dictionary in AUTHORED_HEIGHT_MAPS:
-		var height_path: String = height_map.path
-		var terrain_type: String = height_map.terrain_type
+	var catalog := TerrainMaterialCatalogScript.new()
+	var catalog_result: Dictionary = catalog.load_from_file()
+	_expect(catalog_result.ok, "terrain material catalog should load for height map validation: %s" % catalog_result.get("error", ""))
+	if not catalog_result.ok:
+		return
+
+	for terrain_type in [TerrainCellScript.TERRAIN_TYPE_1, TerrainCellScript.TERRAIN_TYPE_2]:
+		var material_entry: Dictionary = catalog.get_material_for_terrain_type(terrain_type)
+		var height_path: String = material_entry.height_path
 		_expect(FileAccess.file_exists(height_path), "authored height map should exist: %s" % height_path)
 		if not FileAccess.file_exists(height_path):
 			continue
@@ -208,9 +205,11 @@ func _verify_invalid_height_settings_failure(renderer: Node) -> void:
 func _verify_live_height_setting_updates(renderer: Node) -> void:
 	var original_influence: float = renderer.get("height_blend_influence")
 	var original_contrast: float = renderer.get("height_blend_contrast")
+	var original_material := renderer.get("material") as ShaderMaterial
 
 	renderer.set("height_blend_influence", 0.35)
 	renderer.set("height_blend_contrast", 2.25)
+	var active_material := renderer.get("material") as ShaderMaterial
 	_expect(
 		is_equal_approx(float(renderer.call("get_shader_parameter_value", &"height_blend_influence")), 0.35),
 		"changing height_blend_influence at runtime should update the shader parameter"
@@ -219,6 +218,30 @@ func _verify_live_height_setting_updates(renderer: Node) -> void:
 		is_equal_approx(float(renderer.call("get_shader_parameter_value", &"height_blend_contrast")), 2.25),
 		"changing height_blend_contrast at runtime should update the shader parameter"
 	)
+	_expect(
+		active_material != null and is_equal_approx(float(active_material.get_shader_parameter(&"height_blend_influence")), 0.35),
+		"changing height_blend_influence at runtime should update the active Polygon2D material"
+	)
+	_expect(
+		active_material != null and is_equal_approx(float(active_material.get_shader_parameter(&"height_blend_contrast")), 2.25),
+		"changing height_blend_contrast at runtime should update the active Polygon2D material"
+	)
+
+	if original_material != null:
+		var replacement_material := ShaderMaterial.new()
+		replacement_material.shader = original_material.shader
+		renderer.set("material", replacement_material)
+		renderer.set("height_blend_influence", 1.8)
+		renderer.set("height_blend_contrast", 4.0)
+		_expect(
+			is_equal_approx(float(replacement_material.get_shader_parameter(&"height_blend_influence")), 1.8),
+			"live height_blend_influence updates should target a replaced active material"
+		)
+		_expect(
+			is_equal_approx(float(replacement_material.get_shader_parameter(&"height_blend_contrast")), 4.0),
+			"live height_blend_contrast updates should target a replaced active material"
+		)
+		renderer.set("material", original_material)
 
 	renderer.set("height_blend_influence", original_influence)
 	renderer.set("height_blend_contrast", original_contrast)
