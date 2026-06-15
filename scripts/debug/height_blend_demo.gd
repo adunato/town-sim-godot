@@ -3,7 +3,7 @@ extends Node2D
 const TERRAIN_SHADER_PATH := "res://shaders/terrain/terrain_binary_mask.gdshader"
 const SURFACE_SIZE := Vector2(768.0, 256.0)
 const TRANSITION_WIDTH := 220.0
-const HEIGHT_BLEND_INFLUENCE := 3.0
+const HEIGHT_BLEND_INFLUENCE := 1.5
 const HEIGHT_BLEND_CONTRAST := 3.0
 const TEXTURE_REPEAT_WORLD_SIZE := 256.0
 const PREVIEW_SIZE := 192.0
