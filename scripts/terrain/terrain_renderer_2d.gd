@@ -14,17 +14,13 @@ const MASK_PIXELS_PER_CELL := 8
 @export var terrain_type_2_height_texture: Texture2D
 @export_range(1.0, 1024.0, 1.0) var texture_repeat_world_size := 256.0
 @export_range(0.25, 8.0, 0.25) var blend_width_cells := 1.5
-@export_range(0.0, 3.0, 0.05) var height_blend_influence: float:
-	get:
-		return _height_blend_influence
+@export_range(0.0, 3.0, 0.05) var height_blend_influence := 1.2:
 	set(value):
-		_height_blend_influence = value
+		height_blend_influence = value
 		_sync_height_blend_shader_parameters()
-@export_range(0.25, 6.0, 0.05) var height_blend_contrast: float:
-	get:
-		return _height_blend_contrast
+@export_range(0.25, 6.0, 0.05) var height_blend_contrast := 2.1:
 	set(value):
-		_height_blend_contrast = value
+		height_blend_contrast = value
 		_sync_height_blend_shader_parameters()
 
 var _terrain_data: RefCounted
@@ -34,8 +30,6 @@ var _terrain_type_2_height_texture: Texture2D
 var _terrain_material_catalog: RefCounted
 var _height_input_route := TerrainMaterialCatalogScript.HEIGHT_ROUTE_AUTHORED_TEXTURES
 var _height_brightness_convention := "brighter_is_higher"
-var _height_blend_influence := 1.2
-var _height_blend_contrast := 2.1
 var _terrain_material: ShaderMaterial
 var _surface_bounds := Rect2()
 
@@ -371,8 +365,8 @@ func _apply_height_blend_shader_parameters(shader_material: ShaderMaterial) -> v
 	if shader_material == null:
 		return
 
-	shader_material.set_shader_parameter("height_blend_influence", _height_blend_influence)
-	shader_material.set_shader_parameter("height_blend_contrast", _height_blend_contrast)
+	shader_material.set_shader_parameter("height_blend_influence", height_blend_influence)
+	shader_material.set_shader_parameter("height_blend_contrast", height_blend_contrast)
 
 
 func _load_default_materials() -> void:
