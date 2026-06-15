@@ -35,8 +35,8 @@ var _terrain_mask_texture: ImageTexture
 var _terrain_type_1_height_texture: Texture2D
 var _terrain_type_2_height_texture: Texture2D
 var _height_input_route := HEIGHT_ROUTE_AUTHORED_TEXTURES
-var _height_blend_influence := 0.75
-var _height_blend_contrast := 1.5
+var _height_blend_influence := 1.2
+var _height_blend_contrast := 2.1
 var _terrain_material: ShaderMaterial
 var _surface_bounds := Rect2()
 
