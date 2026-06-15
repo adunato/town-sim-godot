@@ -57,6 +57,7 @@ func _run_checks() -> void:
 		_verify_height_aware_boundary_behavior(renderer)
 		_verify_interior_stability(renderer)
 		_verify_renderer_continuity(renderer)
+		_verify_live_height_setting_updates(renderer)
 		_verify_invalid_height_settings_failure(renderer)
 
 	renderer.queue_free()
@@ -201,6 +202,25 @@ func _verify_invalid_height_settings_failure(renderer: Node) -> void:
 	validation = renderer.call("validate_height_settings")
 	_expect(not validation.ok, "terrain renderer validation should fail when height_blend_contrast is not positive")
 	_expect(String(validation.get("error", "")).contains("height_blend_contrast"), "invalid height contrast error should name height_blend_contrast")
+	renderer.set("height_blend_contrast", original_contrast)
+
+
+func _verify_live_height_setting_updates(renderer: Node) -> void:
+	var original_influence: float = renderer.get("height_blend_influence")
+	var original_contrast: float = renderer.get("height_blend_contrast")
+
+	renderer.set("height_blend_influence", 0.35)
+	renderer.set("height_blend_contrast", 2.25)
+	_expect(
+		is_equal_approx(float(renderer.call("get_shader_parameter_value", &"height_blend_influence")), 0.35),
+		"changing height_blend_influence at runtime should update the shader parameter"
+	)
+	_expect(
+		is_equal_approx(float(renderer.call("get_shader_parameter_value", &"height_blend_contrast")), 2.25),
+		"changing height_blend_contrast at runtime should update the shader parameter"
+	)
+
+	renderer.set("height_blend_influence", original_influence)
 	renderer.set("height_blend_contrast", original_contrast)
 
 

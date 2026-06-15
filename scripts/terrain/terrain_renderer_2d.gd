@@ -17,14 +17,26 @@ const HEIGHT_ROUTE_AUTHORED_TEXTURES := "authored_texture_maps"
 @export var terrain_type_2_height_texture: Texture2D
 @export_range(1.0, 1024.0, 1.0) var texture_repeat_world_size := 256.0
 @export_range(0.25, 8.0, 0.25) var blend_width_cells := 1.5
-@export_range(0.0, 3.0, 0.05) var height_blend_influence := 0.75
-@export_range(0.25, 6.0, 0.05) var height_blend_contrast := 1.5
+@export_range(0.0, 3.0, 0.05) var height_blend_influence: float:
+	get:
+		return _height_blend_influence
+	set(value):
+		_height_blend_influence = value
+		_sync_height_blend_shader_parameters()
+@export_range(0.25, 6.0, 0.05) var height_blend_contrast: float:
+	get:
+		return _height_blend_contrast
+	set(value):
+		_height_blend_contrast = value
+		_sync_height_blend_shader_parameters()
 
 var _terrain_data: RefCounted
 var _terrain_mask_texture: ImageTexture
 var _terrain_type_1_height_texture: Texture2D
 var _terrain_type_2_height_texture: Texture2D
 var _height_input_route := HEIGHT_ROUTE_AUTHORED_TEXTURES
+var _height_blend_influence := 0.75
+var _height_blend_contrast := 1.5
 var _terrain_material: ShaderMaterial
 var _surface_bounds := Rect2()
 
@@ -294,8 +306,7 @@ func _configure_shader_parameters() -> Dictionary:
 	_terrain_material.set_shader_parameter("terrain_world_origin", _surface_bounds.position)
 	_terrain_material.set_shader_parameter("terrain_world_size", _surface_bounds.size)
 	_terrain_material.set_shader_parameter("texture_repeat_world_size", texture_repeat_world_size)
-	_terrain_material.set_shader_parameter("height_blend_influence", height_blend_influence)
-	_terrain_material.set_shader_parameter("height_blend_contrast", height_blend_contrast)
+	_sync_height_blend_shader_parameters()
 	material = _terrain_material
 	return _success()
 
@@ -419,6 +430,16 @@ func _ensure_shader_material() -> void:
 
 	_terrain_material = ShaderMaterial.new()
 	_terrain_material.shader = shader
+
+
+func _sync_height_blend_shader_parameters() -> void:
+	if _terrain_material == null and material is ShaderMaterial:
+		_terrain_material = material
+	if _terrain_material == null:
+		return
+
+	_terrain_material.set_shader_parameter("height_blend_influence", _height_blend_influence)
+	_terrain_material.set_shader_parameter("height_blend_contrast", _height_blend_contrast)
 
 
 func _load_default_textures() -> void:
