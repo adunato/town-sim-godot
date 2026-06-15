@@ -4,18 +4,9 @@ const TerrainConfigScript := preload("res://scripts/terrain/terrain_config.gd")
 const TerrainGeneratorScript := preload("res://scripts/terrain/terrain_generator.gd")
 const TerrainCellScript := preload("res://scripts/terrain/terrain_cell.gd")
 const TerrainRendererScript := preload("res://scripts/terrain/terrain_renderer_2d.gd")
+const TerrainMaterialCatalogScript := preload("res://scripts/terrain/terrain_material_catalog.gd")
 
 const CONFIG_PATH := "res://data/terrain/prototype_terrain_config.json"
-const AUTHORED_HEIGHT_MAPS := [
-	{
-		"path": TerrainRendererScript.TERRAIN_TYPE_1_HEIGHT_TEXTURE_PATH,
-		"terrain_type": TerrainCellScript.TERRAIN_TYPE_1,
-	},
-	{
-		"path": TerrainRendererScript.TERRAIN_TYPE_2_HEIGHT_TEXTURE_PATH,
-		"terrain_type": TerrainCellScript.TERRAIN_TYPE_2,
-	},
-]
 
 var _failures: Array[String] = []
 
@@ -66,8 +57,8 @@ func _run_checks() -> void:
 
 
 func _verify_height_route(renderer: Node) -> void:
-	_expect(renderer.call("get_height_input_route") == TerrainRendererScript.HEIGHT_ROUTE_AUTHORED_TEXTURES, "height route should use authored texture maps")
-	_expect(renderer.call("get_height_brightness_convention") == "authored_height_map_brighter_is_higher", "height brightness convention should document brighter texels as higher")
+	_expect(renderer.call("get_height_input_route") == TerrainMaterialCatalogScript.HEIGHT_ROUTE_AUTHORED_TEXTURES, "height route should use authored texture maps")
+	_expect(renderer.call("get_height_brightness_convention") == "brighter_is_higher", "height brightness convention should document brighter texels as higher")
 
 	var terrain_1_height: Texture2D = renderer.call("get_terrain_height_texture", TerrainCellScript.TERRAIN_TYPE_1)
 	var terrain_2_height: Texture2D = renderer.call("get_terrain_height_texture", TerrainCellScript.TERRAIN_TYPE_2)
@@ -87,9 +78,15 @@ func _verify_height_route(renderer: Node) -> void:
 
 
 func _verify_authored_height_maps(renderer: Node) -> void:
-	for height_map: Dictionary in AUTHORED_HEIGHT_MAPS:
-		var height_path: String = height_map.path
-		var terrain_type: String = height_map.terrain_type
+	var catalog := TerrainMaterialCatalogScript.new()
+	var catalog_result: Dictionary = catalog.load_from_file()
+	_expect(catalog_result.ok, "terrain material catalog should load for height map validation: %s" % catalog_result.get("error", ""))
+	if not catalog_result.ok:
+		return
+
+	for terrain_type in [TerrainCellScript.TERRAIN_TYPE_1, TerrainCellScript.TERRAIN_TYPE_2]:
+		var material_entry: Dictionary = catalog.get_material_for_terrain_type(terrain_type)
+		var height_path: String = material_entry.height_path
 		_expect(FileAccess.file_exists(height_path), "authored height map should exist: %s" % height_path)
 		if not FileAccess.file_exists(height_path):
 			continue
