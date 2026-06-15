@@ -2,14 +2,11 @@ class_name TerrainRenderer2D
 extends Polygon2D
 
 const TerrainCellScript := preload("res://scripts/terrain/terrain_cell.gd")
+const TerrainMaterialCatalogScript := preload("res://scripts/terrain/terrain_material_catalog.gd")
+const TerrainBlendMaskBuilderScript := preload("res://scripts/terrain/terrain_blend_mask_builder.gd")
 
-const TERRAIN_TYPE_1_TEXTURE_PATH := "res://assets/Textures/mud.png"
-const TERRAIN_TYPE_2_TEXTURE_PATH := "res://assets/Textures/rocky_grass.png"
-const TERRAIN_TYPE_1_HEIGHT_TEXTURE_PATH := "res://assets/Textures/mud_height.png"
-const TERRAIN_TYPE_2_HEIGHT_TEXTURE_PATH := "res://assets/Textures/rocky_grass_height.png"
 const TERRAIN_SHADER_PATH := "res://shaders/terrain/terrain_binary_mask.gdshader"
 const MASK_PIXELS_PER_CELL := 8
-const HEIGHT_ROUTE_AUTHORED_TEXTURES := "authored_texture_maps"
 
 @export var terrain_type_1_texture: Texture2D
 @export var terrain_type_2_texture: Texture2D
@@ -34,7 +31,9 @@ var _terrain_data: RefCounted
 var _terrain_mask_texture: ImageTexture
 var _terrain_type_1_height_texture: Texture2D
 var _terrain_type_2_height_texture: Texture2D
-var _height_input_route := HEIGHT_ROUTE_AUTHORED_TEXTURES
+var _terrain_material_catalog: RefCounted
+var _height_input_route := TerrainMaterialCatalogScript.HEIGHT_ROUTE_AUTHORED_TEXTURES
+var _height_brightness_convention := "brighter_is_higher"
 var _height_blend_influence := 1.2
 var _height_blend_contrast := 2.1
 var _terrain_material: ShaderMaterial
@@ -43,7 +42,7 @@ var _surface_bounds := Rect2()
 
 func _ready() -> void:
 	z_index = -90
-	_load_default_textures()
+	_load_default_materials()
 	_ensure_shader_material()
 
 
@@ -130,7 +129,18 @@ func get_height_input_route() -> String:
 
 
 func get_height_brightness_convention() -> String:
-	return "authored_height_map_brighter_is_higher"
+	return _height_brightness_convention
+
+
+func get_runtime_texture_loading_mode() -> String:
+	return "resource_loader_texture2d"
+
+
+func get_material_catalog_path() -> String:
+	if _terrain_material_catalog == null:
+		return ""
+
+	return String(_terrain_material_catalog.get("catalog_path"))
 
 
 func get_terrain_height_texture(terrain_type: String) -> Texture2D:
@@ -222,10 +232,9 @@ func get_texture_for_terrain_type(terrain_type: String) -> Texture2D:
 
 
 func get_texture_path_for_terrain_type(terrain_type: String) -> String:
-	if terrain_type == TerrainCellScript.TERRAIN_TYPE_1:
-		return TERRAIN_TYPE_1_TEXTURE_PATH
-	if terrain_type == TerrainCellScript.TERRAIN_TYPE_2:
-		return TERRAIN_TYPE_2_TEXTURE_PATH
+	if _terrain_material_catalog != null and _terrain_material_catalog.has_method("get_material_for_terrain_type"):
+		var material_entry: Dictionary = _terrain_material_catalog.call("get_material_for_terrain_type", terrain_type)
+		return String(material_entry.get("diffuse_path", ""))
 
 	return ""
 
@@ -243,15 +252,15 @@ func get_shader_parameter_value(parameter_name: StringName) -> Variant:
 
 func validate_texture_inputs(load_defaults := true) -> Dictionary:
 	if load_defaults:
-		_load_default_textures()
+		_load_default_materials()
 	if terrain_type_1_texture == null:
-		return _failure("TerrainRenderer2D missing texture input for terrain_1: %s" % TERRAIN_TYPE_1_TEXTURE_PATH)
+		return _failure("TerrainRenderer2D missing texture input for terrain_1 from %s." % TerrainMaterialCatalogScript.DEFAULT_CATALOG_PATH)
 	if terrain_type_2_texture == null:
-		return _failure("TerrainRenderer2D missing texture input for terrain_2: %s" % TERRAIN_TYPE_2_TEXTURE_PATH)
+		return _failure("TerrainRenderer2D missing texture input for terrain_2 from %s." % TerrainMaterialCatalogScript.DEFAULT_CATALOG_PATH)
 	if terrain_type_1_height_texture == null:
-		return _failure("TerrainRenderer2D missing height texture input for terrain_1: %s" % TERRAIN_TYPE_1_HEIGHT_TEXTURE_PATH)
+		return _failure("TerrainRenderer2D missing height texture input for terrain_1 from %s." % TerrainMaterialCatalogScript.DEFAULT_CATALOG_PATH)
 	if terrain_type_2_height_texture == null:
-		return _failure("TerrainRenderer2D missing height texture input for terrain_2: %s" % TERRAIN_TYPE_2_HEIGHT_TEXTURE_PATH)
+		return _failure("TerrainRenderer2D missing height texture input for terrain_2 from %s." % TerrainMaterialCatalogScript.DEFAULT_CATALOG_PATH)
 	if texture_repeat_world_size <= 0.0:
 		return _failure("TerrainRenderer2D texture_repeat_world_size must be positive.")
 
@@ -315,108 +324,20 @@ func _configure_height_textures() -> Dictionary:
 	if terrain_type_1_height_texture != null and terrain_type_2_height_texture != null:
 		_terrain_type_1_height_texture = terrain_type_1_height_texture
 		_terrain_type_2_height_texture = terrain_type_2_height_texture
-		_height_input_route = HEIGHT_ROUTE_AUTHORED_TEXTURES
+		_height_input_route = TerrainMaterialCatalogScript.HEIGHT_ROUTE_AUTHORED_TEXTURES
 		return _success()
 
 	return _failure("TerrainRenderer2D requires authored height textures for terrain blending.")
 
 
 func _build_blend_mask_texture() -> Dictionary:
-	if _terrain_data == null:
-		return _failure("TerrainRenderer2D requires terrain data before building a terrain blend mask.")
+	var builder := TerrainBlendMaskBuilderScript.new()
+	var result: Dictionary = builder.build(_terrain_data, MASK_PIXELS_PER_CELL, blend_width_cells)
+	if not result.ok:
+		return result
 
-	var image := Image.create(
-		_terrain_data.grid_width * MASK_PIXELS_PER_CELL,
-		_terrain_data.grid_height * MASK_PIXELS_PER_CELL,
-		false,
-		Image.FORMAT_RGBA8
-	)
-	var terrain_types_by_coordinate := {}
-	for cell in _terrain_data.cells:
-		if not TerrainCellScript.is_known_terrain_type(cell.terrain_type):
-			return _failure("TerrainRenderer2D cannot build mask for unknown terrain type '%s' at %s." % [cell.terrain_type, cell.coordinate])
-		terrain_types_by_coordinate[cell.coordinate] = cell.terrain_type
-
-	for cell in _terrain_data.cells:
-		_write_cell_blend_mask(image, cell.coordinate, terrain_types_by_coordinate)
-
-	_terrain_mask_texture = ImageTexture.create_from_image(image)
+	_terrain_mask_texture = result.texture
 	return _success()
-
-
-func _write_cell_blend_mask(image: Image, cell_coordinate: Vector2i, terrain_types_by_coordinate: Dictionary) -> void:
-	var base_value := _mask_value_for_terrain_type(terrain_types_by_coordinate.get(cell_coordinate, TerrainCellScript.TERRAIN_TYPE_1))
-	var edge_blend_width: float = clamp(blend_width_cells * 0.35, 0.125, 0.5)
-	var has_left_boundary := _is_opposite_terrain(cell_coordinate + Vector2i.LEFT, base_value, terrain_types_by_coordinate)
-	var has_right_boundary := _is_opposite_terrain(cell_coordinate + Vector2i.RIGHT, base_value, terrain_types_by_coordinate)
-	var has_top_boundary := _is_opposite_terrain(cell_coordinate + Vector2i.UP, base_value, terrain_types_by_coordinate)
-	var has_bottom_boundary := _is_opposite_terrain(cell_coordinate + Vector2i.DOWN, base_value, terrain_types_by_coordinate)
-	var first_x_pixel := cell_coordinate.x * MASK_PIXELS_PER_CELL
-	var first_y_pixel := cell_coordinate.y * MASK_PIXELS_PER_CELL
-
-	for y_offset in range(MASK_PIXELS_PER_CELL):
-		var y_position := (float(y_offset) + 0.5) / float(MASK_PIXELS_PER_CELL)
-		for x_offset in range(MASK_PIXELS_PER_CELL):
-			var x_position := (float(x_offset) + 0.5) / float(MASK_PIXELS_PER_CELL)
-			var nearest_boundary_distance := _nearest_cell_boundary_distance(
-				x_position,
-				y_position,
-				has_left_boundary,
-				has_right_boundary,
-				has_top_boundary,
-				has_bottom_boundary
-			)
-			var mask_value := base_value
-			if nearest_boundary_distance >= 0.0:
-				var base_weight := smoothstep(0.0, edge_blend_width, nearest_boundary_distance)
-				mask_value = lerpf(0.5, base_value, base_weight)
-			image.set_pixel(
-				first_x_pixel + x_offset,
-				first_y_pixel + y_offset,
-				Color(mask_value, mask_value, mask_value, 1.0)
-			)
-
-
-func _is_opposite_terrain(neighbor_coordinate: Vector2i, base_value: float, terrain_types_by_coordinate: Dictionary) -> bool:
-	if not _terrain_data.is_cell_in_bounds(neighbor_coordinate):
-		return false
-
-	var neighbor_value := _mask_value_for_terrain_type(terrain_types_by_coordinate.get(neighbor_coordinate, TerrainCellScript.TERRAIN_TYPE_1))
-	return not is_equal_approx(neighbor_value, base_value)
-
-
-func _nearest_cell_boundary_distance(
-	x_position: float,
-	y_position: float,
-	has_left_boundary: bool,
-	has_right_boundary: bool,
-	has_top_boundary: bool,
-	has_bottom_boundary: bool
-) -> float:
-	var nearest_distance := -1.0
-	if has_left_boundary:
-		nearest_distance = x_position
-	if has_right_boundary:
-		nearest_distance = _min_boundary_distance(nearest_distance, 1.0 - x_position)
-	if has_top_boundary:
-		nearest_distance = _min_boundary_distance(nearest_distance, y_position)
-	if has_bottom_boundary:
-		nearest_distance = _min_boundary_distance(nearest_distance, 1.0 - y_position)
-
-	return nearest_distance
-
-
-func _min_boundary_distance(current_distance: float, candidate_distance: float) -> float:
-	if current_distance < 0.0:
-		return candidate_distance
-	return minf(current_distance, candidate_distance)
-
-
-func _mask_value_for_terrain_type(terrain_type: String) -> float:
-	if terrain_type == TerrainCellScript.TERRAIN_TYPE_2:
-		return 1.0
-
-	return 0.0
 
 
 func _ensure_shader_material() -> void:
@@ -442,25 +363,30 @@ func _sync_height_blend_shader_parameters() -> void:
 	_terrain_material.set_shader_parameter("height_blend_contrast", _height_blend_contrast)
 
 
-func _load_default_textures() -> void:
+func _load_default_materials() -> void:
+	if _terrain_material_catalog == null:
+		_terrain_material_catalog = TerrainMaterialCatalogScript.new()
+		var catalog_result: Dictionary = _terrain_material_catalog.call("load_from_file")
+		if not catalog_result.ok:
+			push_error("TerrainRenderer2D failed to load terrain material catalog: %s" % catalog_result.error)
+			return
+
+	texture_repeat_world_size = float(_terrain_material_catalog.get("texture_repeat_world_size"))
+	height_blend_influence = float(_terrain_material_catalog.get("height_blend_influence"))
+	height_blend_contrast = float(_terrain_material_catalog.get("height_blend_contrast"))
+	_height_brightness_convention = String(_terrain_material_catalog.get("height_brightness_convention"))
+	_height_input_route = TerrainMaterialCatalogScript.HEIGHT_ROUTE_AUTHORED_TEXTURES
+
+	var terrain_1_material: Dictionary = _terrain_material_catalog.call("get_material_for_terrain_type", TerrainCellScript.TERRAIN_TYPE_1)
+	var terrain_2_material: Dictionary = _terrain_material_catalog.call("get_material_for_terrain_type", TerrainCellScript.TERRAIN_TYPE_2)
 	if terrain_type_1_texture == null:
-		terrain_type_1_texture = _load_texture_from_image(TERRAIN_TYPE_1_TEXTURE_PATH)
+		terrain_type_1_texture = terrain_1_material.get("diffuse_texture", null) as Texture2D
 	if terrain_type_2_texture == null:
-		terrain_type_2_texture = _load_texture_from_image(TERRAIN_TYPE_2_TEXTURE_PATH)
+		terrain_type_2_texture = terrain_2_material.get("diffuse_texture", null) as Texture2D
 	if terrain_type_1_height_texture == null:
-		terrain_type_1_height_texture = _load_texture_from_image(TERRAIN_TYPE_1_HEIGHT_TEXTURE_PATH)
+		terrain_type_1_height_texture = terrain_1_material.get("height_texture", null) as Texture2D
 	if terrain_type_2_height_texture == null:
-		terrain_type_2_height_texture = _load_texture_from_image(TERRAIN_TYPE_2_HEIGHT_TEXTURE_PATH)
-
-
-func _load_texture_from_image(path: String) -> Texture2D:
-	var image := Image.new()
-	var load_result := image.load(path)
-	if load_result != OK:
-		push_error("TerrainRenderer2D failed to load terrain texture '%s': %s" % [path, error_string(load_result)])
-		return null
-
-	return ImageTexture.create_from_image(image)
+		terrain_type_2_height_texture = terrain_2_material.get("height_texture", null) as Texture2D
 
 
 func _success(extra: Dictionary = {}) -> Dictionary:

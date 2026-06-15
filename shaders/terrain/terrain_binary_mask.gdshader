@@ -9,8 +9,8 @@ uniform sampler2D terrain_type_2_height : filter_linear, repeat_enable;
 uniform vec2 terrain_world_origin = vec2(0.0, 0.0);
 uniform vec2 terrain_world_size = vec2(1.0, 1.0);
 uniform float texture_repeat_world_size = 256.0;
-uniform float height_blend_influence = 1.75;
-uniform float height_blend_contrast = 2.75;
+uniform float height_blend_influence = 1.2;
+uniform float height_blend_contrast = 2.1;
 
 varying vec2 terrain_local_position;
 

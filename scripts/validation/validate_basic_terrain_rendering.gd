@@ -4,6 +4,7 @@ const TerrainConfigScript := preload("res://scripts/terrain/terrain_config.gd")
 const TerrainGeneratorScript := preload("res://scripts/terrain/terrain_generator.gd")
 const TerrainCellScript := preload("res://scripts/terrain/terrain_cell.gd")
 const TerrainRendererScript := preload("res://scripts/terrain/terrain_renderer_2d.gd")
+const TerrainMaterialCatalogScript := preload("res://scripts/terrain/terrain_material_catalog.gd")
 const MainScene := preload("res://scenes/main.tscn")
 
 const CONFIG_PATH := "res://data/terrain/prototype_terrain_config.json"
@@ -61,8 +62,14 @@ func _run_checks() -> void:
 func _verify_texture_inputs(renderer: Node) -> void:
 	var validation: Dictionary = renderer.call("validate_texture_inputs", true)
 	_expect(validation.ok, "terrain renderer should have texture inputs for both terrain types: %s" % validation.get("error", ""))
-	_expect(FileAccess.file_exists(TerrainRendererScript.TERRAIN_TYPE_1_TEXTURE_PATH), "terrain_1 texture file should exist: %s" % TerrainRendererScript.TERRAIN_TYPE_1_TEXTURE_PATH)
-	_expect(FileAccess.file_exists(TerrainRendererScript.TERRAIN_TYPE_2_TEXTURE_PATH), "terrain_2 texture file should exist: %s" % TerrainRendererScript.TERRAIN_TYPE_2_TEXTURE_PATH)
+	var catalog := TerrainMaterialCatalogScript.new()
+	var catalog_result: Dictionary = catalog.load_from_file()
+	_expect(catalog_result.ok, "terrain material catalog should load: %s" % catalog_result.get("error", ""))
+	if catalog_result.ok:
+		var terrain_1_material: Dictionary = catalog.get_material_for_terrain_type(TerrainCellScript.TERRAIN_TYPE_1)
+		var terrain_2_material: Dictionary = catalog.get_material_for_terrain_type(TerrainCellScript.TERRAIN_TYPE_2)
+		_expect(FileAccess.file_exists(terrain_1_material.diffuse_path), "terrain_1 texture file should exist: %s" % terrain_1_material.diffuse_path)
+		_expect(FileAccess.file_exists(terrain_2_material.diffuse_path), "terrain_2 texture file should exist: %s" % terrain_2_material.diffuse_path)
 	_expect(renderer.call("get_texture_for_terrain_type", TerrainCellScript.TERRAIN_TYPE_1) != null, "terrain_1 should resolve to a Texture2D")
 	_expect(renderer.call("get_texture_for_terrain_type", TerrainCellScript.TERRAIN_TYPE_2) != null, "terrain_2 should resolve to a Texture2D")
 
