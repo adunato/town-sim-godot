@@ -5,21 +5,26 @@ const TerrainCellScript := preload("res://scripts/terrain/terrain_cell.gd")
 
 const TERRAIN_TYPE_1_TEXTURE_PATH := "res://assets/Textures/mud.png"
 const TERRAIN_TYPE_2_TEXTURE_PATH := "res://assets/Textures/rocky_grass.png"
+const TERRAIN_TYPE_1_HEIGHT_TEXTURE_PATH := "res://assets/Textures/mud_height.png"
+const TERRAIN_TYPE_2_HEIGHT_TEXTURE_PATH := "res://assets/Textures/rocky_grass_height.png"
 const TERRAIN_SHADER_PATH := "res://shaders/terrain/terrain_binary_mask.gdshader"
 const MASK_PIXELS_PER_CELL := 8
-const HEIGHT_ROUTE_GENERATED_FROM_DIFFUSE := "generated_from_diffuse_luminance"
+const HEIGHT_ROUTE_AUTHORED_TEXTURES := "authored_texture_maps"
 
 @export var terrain_type_1_texture: Texture2D
 @export var terrain_type_2_texture: Texture2D
+@export var terrain_type_1_height_texture: Texture2D
+@export var terrain_type_2_height_texture: Texture2D
 @export_range(1.0, 1024.0, 1.0) var texture_repeat_world_size := 256.0
 @export_range(0.25, 8.0, 0.25) var blend_width_cells := 1.5
-@export_range(0.0, 3.0, 0.05) var height_blend_influence := 1.75
-@export_range(0.25, 6.0, 0.05) var height_blend_contrast := 2.75
+@export_range(0.0, 3.0, 0.05) var height_blend_influence := 0.75
+@export_range(0.25, 6.0, 0.05) var height_blend_contrast := 1.5
 
 var _terrain_data: RefCounted
 var _terrain_mask_texture: ImageTexture
-var _terrain_type_1_height_texture: ImageTexture
-var _terrain_type_2_height_texture: ImageTexture
+var _terrain_type_1_height_texture: Texture2D
+var _terrain_type_2_height_texture: Texture2D
+var _height_input_route := HEIGHT_ROUTE_AUTHORED_TEXTURES
 var _terrain_material: ShaderMaterial
 var _surface_bounds := Rect2()
 
@@ -56,7 +61,7 @@ func set_terrain_data(terrain_data: RefCounted) -> Dictionary:
 	if not height_validation.ok:
 		return height_validation
 
-	var height_result := _build_generated_height_textures()
+	var height_result := _configure_height_textures()
 	if not height_result.ok:
 		return height_result
 
@@ -109,11 +114,11 @@ func get_terrain_mask_size() -> Vector2i:
 
 
 func get_height_input_route() -> String:
-	return HEIGHT_ROUTE_GENERATED_FROM_DIFFUSE
+	return _height_input_route
 
 
 func get_height_brightness_convention() -> String:
-	return "diffuse_luminance_brighter_is_higher"
+	return "authored_height_map_brighter_is_higher"
 
 
 func get_terrain_height_texture(terrain_type: String) -> Texture2D:
@@ -142,10 +147,10 @@ func get_height_aware_mask_value(regular_mask: float, terrain_1_height: float, t
 	return clampf(clamped_mask + height_delta * height_blend_influence * boundary_weight, 0.0, 1.0)
 
 
-func get_generated_height_sample(terrain_type: String, uv_coordinate: Vector2) -> Dictionary:
+func get_height_sample(terrain_type: String, uv_coordinate: Vector2) -> Dictionary:
 	var height_texture := get_terrain_height_texture(terrain_type)
 	if height_texture == null:
-		return _failure("TerrainRenderer2D has no generated height texture for '%s'." % terrain_type)
+		return _failure("TerrainRenderer2D has no height texture for '%s'." % terrain_type)
 
 	var image := height_texture.get_image()
 	var wrapped_uv := Vector2(uv_coordinate.x - floorf(uv_coordinate.x), uv_coordinate.y - floorf(uv_coordinate.y))
@@ -231,6 +236,10 @@ func validate_texture_inputs(load_defaults := true) -> Dictionary:
 		return _failure("TerrainRenderer2D missing texture input for terrain_1: %s" % TERRAIN_TYPE_1_TEXTURE_PATH)
 	if terrain_type_2_texture == null:
 		return _failure("TerrainRenderer2D missing texture input for terrain_2: %s" % TERRAIN_TYPE_2_TEXTURE_PATH)
+	if terrain_type_1_height_texture == null:
+		return _failure("TerrainRenderer2D missing height texture input for terrain_1: %s" % TERRAIN_TYPE_1_HEIGHT_TEXTURE_PATH)
+	if terrain_type_2_height_texture == null:
+		return _failure("TerrainRenderer2D missing height texture input for terrain_2: %s" % TERRAIN_TYPE_2_HEIGHT_TEXTURE_PATH)
 	if texture_repeat_world_size <= 0.0:
 		return _failure("TerrainRenderer2D texture_repeat_world_size must be positive.")
 
@@ -291,35 +300,14 @@ func _configure_shader_parameters() -> Dictionary:
 	return _success()
 
 
-func _build_generated_height_textures() -> Dictionary:
-	var terrain_1_result := _build_height_texture_from_diffuse(terrain_type_1_texture, TerrainCellScript.TERRAIN_TYPE_1)
-	if not terrain_1_result.ok:
-		return terrain_1_result
-	var terrain_2_result := _build_height_texture_from_diffuse(terrain_type_2_texture, TerrainCellScript.TERRAIN_TYPE_2)
-	if not terrain_2_result.ok:
-		return terrain_2_result
+func _configure_height_textures() -> Dictionary:
+	if terrain_type_1_height_texture != null and terrain_type_2_height_texture != null:
+		_terrain_type_1_height_texture = terrain_type_1_height_texture
+		_terrain_type_2_height_texture = terrain_type_2_height_texture
+		_height_input_route = HEIGHT_ROUTE_AUTHORED_TEXTURES
+		return _success()
 
-	_terrain_type_1_height_texture = terrain_1_result.texture
-	_terrain_type_2_height_texture = terrain_2_result.texture
-	return _success()
-
-
-func _build_height_texture_from_diffuse(diffuse_texture: Texture2D, terrain_type: String) -> Dictionary:
-	if diffuse_texture == null:
-		return _failure("TerrainRenderer2D cannot generate height data for '%s' without a diffuse texture." % terrain_type)
-
-	var diffuse_image := diffuse_texture.get_image()
-	if diffuse_image == null or diffuse_image.is_empty():
-		return _failure("TerrainRenderer2D cannot generate height data for '%s' from an empty diffuse texture." % terrain_type)
-
-	var height_image := Image.create(diffuse_image.get_width(), diffuse_image.get_height(), false, Image.FORMAT_RGBA8)
-	for y in range(diffuse_image.get_height()):
-		for x in range(diffuse_image.get_width()):
-			var source_color := diffuse_image.get_pixel(x, y)
-			var luminance := source_color.r * 0.2126 + source_color.g * 0.7152 + source_color.b * 0.0722
-			height_image.set_pixel(x, y, Color(luminance, luminance, luminance, 1.0))
-
-	return _success({"texture": ImageTexture.create_from_image(height_image)})
+	return _failure("TerrainRenderer2D requires authored height textures for terrain blending.")
 
 
 func _build_blend_mask_texture() -> Dictionary:
@@ -438,6 +426,10 @@ func _load_default_textures() -> void:
 		terrain_type_1_texture = _load_texture_from_image(TERRAIN_TYPE_1_TEXTURE_PATH)
 	if terrain_type_2_texture == null:
 		terrain_type_2_texture = _load_texture_from_image(TERRAIN_TYPE_2_TEXTURE_PATH)
+	if terrain_type_1_height_texture == null:
+		terrain_type_1_height_texture = _load_texture_from_image(TERRAIN_TYPE_1_HEIGHT_TEXTURE_PATH)
+	if terrain_type_2_height_texture == null:
+		terrain_type_2_height_texture = _load_texture_from_image(TERRAIN_TYPE_2_HEIGHT_TEXTURE_PATH)
 
 
 func _load_texture_from_image(path: String) -> Texture2D:
