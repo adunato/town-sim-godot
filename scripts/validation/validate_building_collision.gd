@@ -48,6 +48,9 @@ func _build_collision_fixture() -> Dictionary:
 	var definitions_result: Dictionary = registry.load_definitions()
 	if not definitions_result.ok:
 		return _failure("building definitions should load for building collision validation: %s" % definitions_result.get("error", ""))
+	var visual_profiles_result: Dictionary = registry.load_visual_profiles()
+	if not visual_profiles_result.ok:
+		return _failure("building visual profiles should load for building collision validation: %s" % visual_profiles_result.get("error", ""))
 
 	var renderer := MapRendererScript.new()
 	get_root().add_child(renderer)

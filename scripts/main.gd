@@ -72,6 +72,10 @@ func _configure_building_entities() -> void:
 	if not definitions_result.ok:
 		push_error("Unable to configure building entities: %s" % definitions_result.error)
 		return
+	var visual_profiles_result: Dictionary = registry.load_visual_profiles()
+	if not visual_profiles_result.ok:
+		push_error("Unable to configure building entities: %s" % visual_profiles_result.error)
+		return
 
 	var entity_result: Dictionary = _buildings.build_from_instances(_map_model, registry, _map_renderer.get_building_instances())
 	if not entity_result.ok:

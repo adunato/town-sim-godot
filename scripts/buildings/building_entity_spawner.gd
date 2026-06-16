@@ -64,16 +64,16 @@ func _create_entity_for_instance(map_model: RefCounted, registry: RefCounted, in
 	if not instance.has("definition_id"):
 		return _failure("Building entity instance '%s' is missing required field 'definition_id'." % instance.get("instance_id", "<unknown>"))
 
-	var definition_result: Dictionary = registry.call("get_definition", String(instance.definition_id))
-	if not definition_result.ok:
-		return _failure("Building entity instance '%s' references unknown definition_id '%s'." % [instance.get("instance_id", "<unknown>"), instance.definition_id])
+	var resolved_result: Dictionary = registry.call("resolve_instance_visual_profile", instance)
+	if not resolved_result.ok:
+		return _failure("Building entity instance '%s' could not resolve building visual data: %s" % [instance.get("instance_id", "<unknown>"), resolved_result.error])
 
 	var entity := BuildingEntityScene.instantiate()
 	if entity == null:
 		return _failure("Unable to instantiate BuildingEntity scene.")
 
 	add_child(entity)
-	var configure_result: Dictionary = entity.configure(map_model, instance, definition_result.definition)
+	var configure_result: Dictionary = entity.configure(map_model, instance, resolved_result.definition, resolved_result.visual_profile)
 	if not configure_result.ok:
 		entity.queue_free()
 		return configure_result
