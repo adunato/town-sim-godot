@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "profiles": [
+	{
+	  "id": "town_hall_sprite",
+	  "texture_path": "res://assets/tiles/play/play_cells_atlas.png",
+	  "source_rect": null,
+	  "anchor": "footprint_bottom_center",
+	  "pixel_offset": {
+		"x": 0,
+		"y": 0
+	  },
+	  "y_sort_origin": "footprint_bottom_center",
+	  "expected_footprint_cells": {
+		"width": 4,
+		"height": 3
+	  }
+	},
+	{
+	  "id": "bakery_sprite",
+	  "texture_path": "res://assets/tiles/play/play_cells_atlas.png",
+	  "source_rect": null,
+	  "anchor": "footprint_bottom_center",
+	  "pixel_offset": {
+		"x": 0,
+		"y": 0
+	  },
+	  "y_sort_origin": "footprint_bottom_center",
+	  "expected_footprint_cells": {
+		"width": 2,
+		"height": 2
+	  }
+	},
+	{
+	  "id": "house_sprite",
+	  "texture_path": "res://assets/tiles/play/play_cells_atlas.png",
+	  "source_rect": null,
+	  "anchor": "footprint_bottom_center",
+	  "pixel_offset": {
+		"x": 0,
+		"y": 0
+	  },
+	  "y_sort_origin": "footprint_bottom_center",
+	  "expected_footprint_cells": {
+		"width": 2,
+		"height": 2
+	  }
+	}
+  ]
+}

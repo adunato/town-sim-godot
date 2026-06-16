@@ -17,20 +17,22 @@ var _interactable_component: Node
 
 var _instance: Dictionary = {}
 var _definition: Dictionary = {}
+var _visual_profile: Dictionary = {}
 var _origin_cell := Vector2i.ZERO
 var _footprint_cells := Vector2i.ZERO
 var _world_rect := Rect2()
 var _is_configured := false
 
 
-func configure(map_model: RefCounted, instance: Dictionary, definition: Dictionary) -> Dictionary:
+func configure(map_model: RefCounted, instance: Dictionary, definition: Dictionary, visual_profile: Dictionary = {}) -> Dictionary:
 	_bind_child_nodes()
-	var validation := _validate_inputs(map_model, instance, definition)
+	var validation := _validate_inputs(map_model, instance, definition, visual_profile)
 	if not validation.ok:
 		return validation
 
 	_instance = instance.duplicate(true)
 	_definition = definition.duplicate(true)
+	_visual_profile = visual_profile.duplicate(true)
 	_origin_cell = _vector2i_from_dictionary(instance.origin_cell)
 	_footprint_cells = Vector2i(int(definition.footprint_cells.width), int(definition.footprint_cells.height))
 	var rect_size := Vector2(_footprint_cells) * float(map_model.cell_size)
@@ -39,7 +41,9 @@ func configure(map_model: RefCounted, instance: Dictionary, definition: Dictiona
 	global_position = top_left
 	name = "BuildingEntity_%s" % get_source_instance_id()
 
-	_visual.configure(rect_size, Color(String(definition.prototype_color)))
+	var visual_result: Dictionary = _visual.configure(rect_size, Color(String(definition.prototype_color)), _visual_profile)
+	if not visual_result.ok:
+		return _failure("BuildingEntity visual configuration failed for '%s': %s" % [get_source_instance_id(), visual_result.error])
 	_configure_collision(rect_size)
 	var component_result := _configure_components()
 	if not component_result.ok:
@@ -118,6 +122,10 @@ func get_visual_node() -> Node2D:
 	return _visual
 
 
+func get_visual_profile_id() -> String:
+	return String(_visual_profile.get("id", ""))
+
+
 func get_identity_component() -> Node:
 	return _identity_component
 
@@ -190,21 +198,30 @@ func _configure_debug_groups() -> void:
 	_collision_body.add_to_group("debug_building_collision")
 
 
-func _validate_inputs(map_model: RefCounted, instance: Dictionary, definition: Dictionary) -> Dictionary:
+func _validate_inputs(map_model: RefCounted, instance: Dictionary, definition: Dictionary, visual_profile: Dictionary) -> Dictionary:
 	if map_model == null:
 		return _failure("BuildingEntity requires a map model.")
 	for field in ["instance_id", "definition_id", "origin_cell"]:
 		if not instance.has(field):
 			return _failure("BuildingEntity source instance is missing required field '%s'." % field)
-	for field in ["id", "display_name", "footprint_cells", "prototype_color", "selectable", "interactable"]:
+	for field in ["id", "display_name", "footprint_cells", "visual_profile_id", "prototype_color", "selectable", "interactable"]:
 		if not definition.has(field):
 			return _failure("BuildingEntity source definition is missing required field '%s'." % field)
+	for field in ["id", "texture_path", "anchor", "pixel_offset", "y_sort_origin", "expected_footprint_cells"]:
+		if not visual_profile.has(field):
+			return _failure("BuildingEntity source visual profile is missing required field '%s'." % field)
 	if String(instance.definition_id) != String(definition.id):
 		return _failure("BuildingEntity instance '%s' references definition '%s' but received definition '%s'." % [instance.instance_id, instance.definition_id, definition.id])
+	if String(definition.visual_profile_id) != String(visual_profile.id):
+		return _failure("BuildingEntity definition '%s' references visual_profile_id '%s' but received visual profile '%s'." % [definition.id, definition.visual_profile_id, visual_profile.id])
 	if not _is_vector2i_dictionary(instance.origin_cell):
 		return _failure("BuildingEntity instance '%s' origin_cell must contain integer x and y fields." % instance.instance_id)
 	if not _is_footprint_dictionary(definition.footprint_cells):
 		return _failure("BuildingEntity definition '%s' footprint_cells must contain positive integer width and height fields." % definition.id)
+	if not _is_footprint_dictionary(visual_profile.expected_footprint_cells):
+		return _failure("BuildingEntity visual profile '%s' expected_footprint_cells must contain positive integer width and height fields." % visual_profile.id)
+	if Vector2i(int(definition.footprint_cells.width), int(definition.footprint_cells.height)) != Vector2i(int(visual_profile.expected_footprint_cells.width), int(visual_profile.expected_footprint_cells.height)):
+		return _failure("BuildingEntity definition '%s' footprint must match visual profile '%s' expected footprint." % [definition.id, visual_profile.id])
 	return _success()
 
 

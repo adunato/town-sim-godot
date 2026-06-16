@@ -44,6 +44,9 @@ func _build_entity_fixture() -> Dictionary:
 	var definitions_result: Dictionary = registry.load_definitions()
 	if not definitions_result.ok:
 		return _failure("building definitions should load for entity validation: %s" % definitions_result.get("error", ""))
+	var visual_profiles_result: Dictionary = registry.load_visual_profiles()
+	if not visual_profiles_result.ok:
+		return _failure("building visual profiles should load for entity validation: %s" % visual_profiles_result.get("error", ""))
 
 	var renderer := MapRendererScript.new()
 	get_root().add_child(renderer)
@@ -97,7 +100,7 @@ func _verify_entity_contract(fixture: Dictionary) -> void:
 		var expected_rect := _expected_world_rect(model, instance, definition)
 		_verify_public_api(entity, instance, definition, expected_rect)
 		_verify_capability_components(entity, instance, definition, expected_rect)
-		_verify_visual(entity, expected_rect)
+		_verify_visual(entity, definition, expected_rect)
 		_verify_collision(entity, instance, definition, expected_rect)
 
 
@@ -145,13 +148,17 @@ func _verify_capability_components(entity: Node, instance: Dictionary, definitio
 		_expect(bool(interactable.call("is_interactable")) == bool(definition.interactable), "interactable component flag should match '%s'" % instance.instance_id)
 
 
-func _verify_visual(entity: Node, expected_rect: Rect2) -> void:
+func _verify_visual(entity: Node, definition: Dictionary, expected_rect: Rect2) -> void:
 	var visual: Node = entity.call("get_visual_node")
 	_expect(visual != null, "building entity '%s' should expose a visual node" % entity.call("get_source_instance_id"))
 	if visual == null:
 		return
 	_expect(visual.get_parent() == entity, "building entity '%s' should own its visual node" % entity.call("get_source_instance_id"))
 	_expect(_rects_equal_approx(visual.call("get_visual_rect"), expected_rect), "visual rect should match world rect for '%s'" % entity.call("get_source_instance_id"))
+	_expect(entity.call("get_visual_profile_id") == String(definition.visual_profile_id), "building entity '%s' should expose the resolved visual profile id" % entity.call("get_source_instance_id"))
+	_expect(visual.call("get_visual_profile_id") == String(definition.visual_profile_id), "visual node should expose visual profile id for '%s'" % entity.call("get_source_instance_id"))
+	_expect(visual.call("get_sprite_node") is Sprite2D, "visual node should create a Sprite2D for '%s'" % entity.call("get_source_instance_id"))
+	_expect(String(visual.call("get_texture_path")).begins_with("res://"), "visual node should retain texture path for '%s'" % entity.call("get_source_instance_id"))
 
 
 func _verify_collision(entity: Node, instance: Dictionary, definition: Dictionary, expected_rect: Rect2) -> void:
