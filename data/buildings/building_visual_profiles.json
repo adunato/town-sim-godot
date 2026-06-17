@@ -45,7 +45,7 @@
 	},
 	{
 	  "id": "house_sprite",
-	  "texture_path": "res://assets/tiles/play/play_cells_atlas.png",
+	  "texture_path": "res://assets/2D Buildings/medieval_house.png",
 	  "source_rect": null,
 	  "anchor": "footprint_bottom_center",
 	  "pixel_offset": {
