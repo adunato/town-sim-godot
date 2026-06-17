@@ -71,6 +71,7 @@ func _verify_visual_profile_lookup(registry: RefCounted) -> void:
 		_expect(profile.anchor == "footprint_bottom_center", "visual profile should expose anchor")
 		_expect(profile.pixel_offset.x == 0 and profile.pixel_offset.y == 0, "visual profile should expose integer pixel_offset")
 		_expect(profile.y_sort_origin == "footprint_bottom_center", "visual profile should expose y_sort_origin")
+		_expect(profile.render_size.width == 128 and profile.render_size.height == 96, "visual profile should expose render_size")
 		_expect(profile.visual_bounds.width == 128 and profile.visual_bounds.height == 96, "visual profile should expose visual_bounds")
 		_expect(profile.expected_footprint_cells.width == 4, "visual profile should expose expected footprint width")
 		_expect(profile.expected_footprint_cells.height == 3, "visual profile should expose expected footprint height")
@@ -231,6 +232,10 @@ func _verify_invalid_visual_profile_configs(registry: RefCounted) -> void:
 	malformed_offset.profiles[0].pixel_offset.x = 0.5
 	_expect_invalid_visual_profiles(registry, malformed_offset, "malformed_pixel_offset")
 
+	var malformed_render_size := valid_config.duplicate(true)
+	malformed_render_size.profiles[0].render_size.height = 0
+	_expect_invalid_visual_profiles(registry, malformed_render_size, "malformed_render_size")
+
 	var malformed_visual_bounds := valid_config.duplicate(true)
 	malformed_visual_bounds.profiles[0].visual_bounds.width = 0
 	_expect_invalid_visual_profiles(registry, malformed_visual_bounds, "malformed_visual_bounds")
@@ -363,6 +368,7 @@ func _valid_visual_profile() -> Dictionary:
 		"anchor": "footprint_bottom_center",
 		"pixel_offset": {"x": 0, "y": 0},
 		"y_sort_origin": "footprint_bottom_center",
+		"render_size": {"width": 64, "height": 64},
 		"visual_bounds": {"x": 0, "y": 0, "width": 64, "height": 64},
 		"expected_footprint_cells": {"width": 2, "height": 2},
 	}

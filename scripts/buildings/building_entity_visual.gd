@@ -78,7 +78,7 @@ func reset_highlight() -> void:
 
 
 func _configure_sprite(rect_size: Vector2, visual_profile: Dictionary) -> Dictionary:
-	for field in ["id", "texture_path", "anchor", "pixel_offset", "y_sort_origin"]:
+	for field in ["id", "texture_path", "anchor", "pixel_offset", "y_sort_origin", "render_size"]:
 		if not visual_profile.has(field):
 			return _failure("Visual profile is missing required field '%s'." % field)
 
@@ -100,11 +100,13 @@ func _configure_sprite(rect_size: Vector2, visual_profile: Dictionary) -> Dictio
 		sprite_texture = atlas
 		source_size = source_rect_result.rect.size
 
+	var render_size := _render_size_from_profile(visual_profile)
 	_sprite = Sprite2D.new()
 	_sprite.name = "ProfileSprite"
 	_sprite.centered = false
 	_sprite.texture = sprite_texture
-	_sprite.position = _sprite_position_for_profile(rect_size, source_size, visual_profile)
+	_sprite.scale = Vector2(render_size.x / source_size.x, render_size.y / source_size.y)
+	_sprite.position = _sprite_position_for_profile(rect_size, render_size, visual_profile)
 	_sprite.y_sort_enabled = true
 	_y_sort_origin_local_y = _local_y_for_y_sort_rule(rect_size, String(visual_profile.y_sort_origin))
 	z_as_relative = false
@@ -125,6 +127,10 @@ func _sprite_position_for_profile(rect_size: Vector2, source_size: Vector2, visu
 	var source_anchor := _source_anchor_for_rule(source_size, String(visual_profile.anchor))
 	var offset := Vector2(int(visual_profile.pixel_offset.x), int(visual_profile.pixel_offset.y))
 	return anchor_point - source_anchor + offset
+
+
+func _render_size_from_profile(visual_profile: Dictionary) -> Vector2:
+	return Vector2(float(visual_profile.render_size.width), float(visual_profile.render_size.height))
 
 
 func _anchor_point_for_rule(rect_size: Vector2, anchor: String) -> Vector2:

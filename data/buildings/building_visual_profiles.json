@@ -11,6 +11,10 @@
 		"y": 0
 	  },
 	  "y_sort_origin": "footprint_bottom_center",
+	  "render_size": {
+		"width": 128,
+		"height": 96
+	  },
 	  "visual_bounds": {
 		"x": 0,
 		"y": 0,
@@ -32,6 +36,10 @@
 		"y": 0
 	  },
 	  "y_sort_origin": "footprint_bottom_center",
+	  "render_size": {
+		"width": 64,
+		"height": 64
+	  },
 	  "visual_bounds": {
 		"x": 0,
 		"y": 0,
@@ -53,6 +61,10 @@
 		"y": 0
 	  },
 	  "y_sort_origin": "footprint_bottom_center",
+	  "render_size": {
+		"width": 64,
+		"height": 64
+	  },
 	  "visual_bounds": {
 		"x": 0,
 		"y": 0,

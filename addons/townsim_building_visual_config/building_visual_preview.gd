@@ -54,8 +54,9 @@ func _draw() -> void:
 
 	var footprint_rect := Rect2(Vector2.ZERO, footprint_size * float(DEFAULT_CELL_SIZE))
 	var source_rect := _source_rect()
-	var sprite_position := _sprite_position(footprint_rect.size, source_rect.size)
-	var sprite_rect := Rect2(sprite_position, source_rect.size)
+	var render_size := _render_size(source_rect.size)
+	var sprite_position := _sprite_position(footprint_rect.size, render_size)
+	var sprite_rect := Rect2(sprite_position, render_size)
 	var visual_bounds := _visual_bounds(sprite_rect)
 	var content_rect := footprint_rect.merge(sprite_rect).merge(visual_bounds).grow(24.0)
 	var fit := _fit_rect(content_rect)
@@ -119,6 +120,13 @@ func _source_rect() -> Rect2:
 			Vector2(float(source_rect.get("width", _texture.get_width())), float(source_rect.get("height", _texture.get_height())))
 		)
 	return Rect2(Vector2.ZERO, Vector2(_texture.get_width(), _texture.get_height()))
+
+
+func _render_size(source_size: Vector2) -> Vector2:
+	var render_size: Variant = _profile.get("render_size", null)
+	if typeof(render_size) == TYPE_DICTIONARY:
+		return Vector2(float(render_size.get("width", source_size.x)), float(render_size.get("height", source_size.y)))
+	return source_size
 
 
 func _visual_bounds(sprite_rect: Rect2) -> Rect2:

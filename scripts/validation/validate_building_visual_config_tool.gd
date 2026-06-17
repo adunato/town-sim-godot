@@ -63,6 +63,7 @@ func _verify_edit_validation(store: RefCounted, definition: Dictionary, profile:
 	edited.anchor = "footprint_center"
 	edited.pixel_offset = {"x": 4, "y": -2}
 	edited.y_sort_origin = "footprint_center"
+	edited.render_size = {"width": 96, "height": 72}
 	edited.visual_bounds = {"x": -8, "y": -16, "width": 96, "height": 88}
 	var messages: Array[String] = store.call("get_validation_messages", definition, edited)
 	_expect(messages.is_empty(), "valid edited placement fields should pass validation: %s" % str(messages))
@@ -76,6 +77,11 @@ func _verify_edit_validation(store: RefCounted, definition: Dictionary, profile:
 	invalid_bounds.visual_bounds.width = 0
 	var bounds_messages: Array[String] = store.call("get_validation_messages", definition, invalid_bounds)
 	_expect(not bounds_messages.is_empty(), "malformed visual bounds should produce validation feedback")
+
+	var invalid_render_size := edited.duplicate(true)
+	invalid_render_size.render_size.width = 0
+	var render_size_messages: Array[String] = store.call("get_validation_messages", definition, invalid_render_size)
+	_expect(not render_size_messages.is_empty(), "malformed render size should produce validation feedback")
 
 
 func _verify_assignment_validation(store: RefCounted, definition: Dictionary, profile: Dictionary) -> void:
@@ -97,6 +103,7 @@ func _verify_save_contract(store: RefCounted, definition: Dictionary, profile: D
 	var edited_definition := definition.duplicate(true)
 	var edited_profile := profile.duplicate(true)
 	edited_profile.pixel_offset = {"x": 7, "y": -3}
+	edited_profile.render_size = {"width": int(definition.footprint_cells.width) * 32, "height": int(definition.footprint_cells.height) * 32}
 	edited_profile.visual_bounds = {"x": -4, "y": -8, "width": 132, "height": 104}
 
 	var definition_apply: Dictionary = store.call("apply_definition_profile_id", String(edited_definition.id), String(edited_profile.id))
@@ -105,6 +112,7 @@ func _verify_save_contract(store: RefCounted, definition: Dictionary, profile: D
 		"anchor": edited_profile.anchor,
 		"pixel_offset": edited_profile.pixel_offset,
 		"y_sort_origin": edited_profile.y_sort_origin,
+		"render_size": edited_profile.render_size,
 		"visual_bounds": edited_profile.visual_bounds,
 	})
 	_expect(profile_apply.ok, "tool should apply visual profile placement edits: %s" % profile_apply.get("error", ""))
@@ -125,6 +133,8 @@ func _verify_save_contract(store: RefCounted, definition: Dictionary, profile: D
 		var saved_profile := _find_record(profiles_data.profiles, String(edited_profile.id))
 		_expect(int(saved_profile.pixel_offset.x) == int(edited_profile.pixel_offset.x), "save should persist pixel_offset.x edits")
 		_expect(int(saved_profile.pixel_offset.y) == int(edited_profile.pixel_offset.y), "save should persist pixel_offset.y edits")
+		_expect(int(saved_profile.render_size.width) == int(edited_profile.render_size.width), "save should persist render_size.width edits")
+		_expect(int(saved_profile.render_size.height) == int(edited_profile.render_size.height), "save should persist render_size.height edits")
 		_expect(int(saved_profile.visual_bounds.x) == int(edited_profile.visual_bounds.x), "save should persist visual_bounds.x edits")
 		_expect(int(saved_profile.visual_bounds.y) == int(edited_profile.visual_bounds.y), "save should persist visual_bounds.y edits")
 		_expect(int(saved_profile.visual_bounds.width) == int(edited_profile.visual_bounds.width), "save should persist visual_bounds.width edits")
