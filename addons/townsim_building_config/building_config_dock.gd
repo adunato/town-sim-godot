@@ -80,6 +80,11 @@ func set_render_width_for_validation(value: int) -> void:
 		_render_width.value = value
 
 
+func set_profile_footprint_width_for_validation(value: int) -> void:
+	if _expected_width != null:
+		_expected_width.value = value
+
+
 func is_render_ratio_locked() -> bool:
 	return _keep_render_ratio != null and _keep_render_ratio.button_pressed
 
@@ -551,9 +556,9 @@ func _update_preview_and_status() -> void:
 	_validation_label.text = "Validation: no errors." if messages.is_empty() else "Validation:\n- " + "\n- ".join(messages)
 	var has_selection := not _current_definition_id.is_empty()
 	var is_dirty := _store.is_dirty()
-	_save_button.disabled = not has_selection or not is_dirty or not messages.is_empty()
+	_save_button.disabled = not has_selection or not is_dirty
 	if not messages.is_empty():
-		_save_button.tooltip_text = "Save blocked until validation errors are fixed."
+		_save_button.tooltip_text = "Save will report the validation errors that must be fixed."
 	elif not is_dirty:
 		_save_button.tooltip_text = "No unsaved building changes."
 	else:

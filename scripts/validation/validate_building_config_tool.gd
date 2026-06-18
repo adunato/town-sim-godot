@@ -165,6 +165,9 @@ func _verify_synchronized_tabs() -> void:
 	dock.set_render_width_for_validation(129)
 	_expect(dock.is_save_enabled(), "a valid visual edit should enable Save")
 	_expect(dock.get_validation_text() == "Validation: no errors.", "a valid visual edit should retain a clear validation state")
+	dock.set_profile_footprint_width_for_validation(footprint.x + 1)
+	_expect(dock.is_save_enabled(), "dirty working data should keep Save clickable while validation errors are being resolved")
+	_expect(dock.get_validation_text().contains("does not match"), "invalid dirty data should explain why persistence will be blocked")
 	dock.queue_free()
 	await process_frame
 
