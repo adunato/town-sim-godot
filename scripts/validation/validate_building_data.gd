@@ -73,8 +73,7 @@ func _verify_visual_profile_lookup(registry: RefCounted) -> void:
 		_expect(profile.y_sort_origin == "footprint_bottom_center", "visual profile should expose y_sort_origin")
 		_expect(profile.render_size.width == 128 and profile.render_size.height == 96, "visual profile should expose render_size")
 		_expect(profile.visual_bounds.width == 128 and profile.visual_bounds.height == 96, "visual profile should expose visual_bounds")
-		_expect(profile.expected_footprint_cells.width == 4, "visual profile should expose expected footprint width")
-		_expect(profile.expected_footprint_cells.height == 3, "visual profile should expose expected footprint height")
+		_expect(not profile.has("expected_footprint_cells"), "visual profiles should not duplicate the definition footprint")
 
 	var unknown_result: Dictionary = registry.call("get_visual_profile", "does_not_exist")
 	_expect(not unknown_result.ok, "registry should reject unknown visual profile ids")
@@ -114,7 +113,6 @@ func _verify_visual_profile_resolution(registry: RefCounted) -> void:
 		_expect(visual_result.ok, "definition '%s' should resolve visual profile: %s" % [definition.id, visual_result.get("error", "")])
 		if visual_result.ok:
 			_expect(visual_result.visual_profile.id == definition.visual_profile_id, "resolved visual profile should match visual_profile_id for '%s'" % definition.id)
-			_expect(visual_result.visual_profile.expected_footprint_cells == definition.footprint_cells, "visual profile footprint should match definition footprint for '%s'" % definition.id)
 
 	var instances: Array[Dictionary] = registry.call("get_instances")
 	_expect(not instances.is_empty(), "instances should be available for instance visual profile resolution")
@@ -144,7 +142,7 @@ func _verify_contract_separation(registry: RefCounted) -> void:
 	_expect(not visual_profiles.is_empty(), "visual profiles should be stored separately from definitions")
 	if not visual_profiles.is_empty():
 		_expect(visual_profiles[0].has("texture_path"), "visual profile records should own texture_path")
-		_expect(visual_profiles[0].has("expected_footprint_cells"), "visual profile records should own expected footprint")
+		_expect(not visual_profiles[0].has("expected_footprint_cells"), "visual profile records should not duplicate the logical footprint")
 		_expect(not visual_profiles[0].has("origin_cell"), "visual profile records should not own map origin_cell")
 		_expect(not visual_profiles[0].has("selectable"), "visual profile records should not own gameplay selectable flag")
 
@@ -239,25 +237,6 @@ func _verify_invalid_visual_profile_configs(registry: RefCounted) -> void:
 	var malformed_visual_bounds := valid_config.duplicate(true)
 	malformed_visual_bounds.profiles[0].visual_bounds.width = 0
 	_expect_invalid_visual_profiles(registry, malformed_visual_bounds, "malformed_visual_bounds")
-
-	var non_positive_footprint := valid_config.duplicate(true)
-	non_positive_footprint.profiles[0].expected_footprint_cells.width = 0
-	_expect_invalid_visual_profiles(registry, non_positive_footprint, "non_positive_expected_footprint")
-
-	var valid_definition := {
-		"id": "valid_shop",
-		"display_name": "Valid Shop",
-		"footprint_cells": {"width": 2, "height": 2},
-		"visual_profile_id": "fixture_sprite",
-		"prototype_color": "#123ABC",
-		"selectable": true,
-		"interactable": false,
-	}
-	var mismatched_profile := valid_profile.duplicate(true)
-	mismatched_profile.expected_footprint_cells = {"width": 3, "height": 2}
-	var mismatch_result: Dictionary = registry.call("validate_visual_profile_footprint_match", valid_definition, mismatched_profile)
-	_expect(not mismatch_result.ok, "mismatched logical/profile footprint sizes should fail validation")
-
 
 func _verify_invalid_instance_configs(registry: RefCounted) -> void:
 	var valid_instance := {
@@ -370,7 +349,6 @@ func _valid_visual_profile() -> Dictionary:
 		"y_sort_origin": "footprint_bottom_center",
 		"render_size": {"width": 64, "height": 64},
 		"visual_bounds": {"x": 0, "y": 0, "width": 64, "height": 64},
-		"expected_footprint_cells": {"width": 2, "height": 2},
 	}
 
 

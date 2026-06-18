@@ -79,10 +79,7 @@ func _verify_store_contract(store: RefCounted) -> void:
 		"interactable": not bool(definition.interactable),
 	})
 	_expect(definition_edit.ok, "all mutable definition fields should update")
-	var mismatch_messages: Array[String] = store.call("get_validation_messages")
-	_expect(not mismatch_messages.is_empty(), "footprint mismatch should produce validation feedback")
-	var blocked_save: Dictionary = store.call("save", "user://invalid_building_definitions.json", "user://invalid_building_profiles.json")
-	_expect(not blocked_save.ok, "save should be blocked while working data is invalid")
+	_expect(store.call("get_validation_messages").is_empty(), "definition footprint edits should remain valid without duplicated profile state")
 
 	var profile_edit: Dictionary = store.call("update_visual_profile_fields", profile_id, {
 		"texture_path": profile.texture_path,
@@ -91,11 +88,10 @@ func _verify_store_contract(store: RefCounted) -> void:
 		"pixel_offset": {"x": 3, "y": -2},
 		"y_sort_origin": "footprint_center",
 		"render_size": {"width": 96, "height": 80},
-		"expected_footprint_cells": {"width": changed_width, "height": int(definition.footprint_cells.height)},
 		"visual_bounds": {"x": -8, "y": -12, "width": 112, "height": 96},
 	})
 	_expect(profile_edit.ok, "all mutable visual profile fields should update")
-	_expect(store.call("get_validation_messages").is_empty(), "synchronized footprint edits should restore valid working data")
+	_expect(store.call("get_validation_messages").is_empty(), "definition and visual edits should retain valid working data")
 	_expect(store.call("is_dirty"), "mutable edits should mark the shared working copy dirty")
 
 	var definitions_target := "user://building_config_tool_definitions.json"
@@ -109,7 +105,7 @@ func _verify_store_contract(store: RefCounted) -> void:
 	_expect(String(saved_definition.get("id", "")) == definition_id, "save should preserve stable definition ID")
 	_expect(String(saved_profile.get("id", "")) == profile_id, "save should preserve stable profile ID")
 	_expect(int(saved_definition.get("footprint_cells", {}).get("width", 0)) == changed_width, "save should persist definition edits")
-	_expect(int(saved_profile.get("expected_footprint_cells", {}).get("width", 0)) == changed_width, "save should persist visual edits")
+	_expect(not saved_profile.has("expected_footprint_cells"), "save should not duplicate the definition footprint in visual profiles")
 	_expect(not saved_definition.has("terrain_material_id"), "terrain selection should not be written to definitions")
 	_expect(not saved_profile.has("terrain_material_id"), "terrain selection should not be written to profiles")
 
@@ -167,9 +163,6 @@ func _verify_synchronized_tabs() -> void:
 	_expect(dock.get_validation_text() == "Validation: no errors.", "a valid visual edit should retain a clear validation state")
 	dock.set_prototype_color_for_validation(Color("#123456"))
 	_expect(dock.get_validation_text() == "Validation: no errors.", "colour picker edits should serialize prototype_color as #RRGGBB")
-	dock.set_profile_footprint_width_for_validation(footprint.x + 1)
-	_expect(dock.is_save_enabled(), "dirty working data should keep Save clickable while validation errors are being resolved")
-	_expect(dock.get_validation_text().contains("does not match"), "invalid dirty data should explain why persistence will be blocked")
 	dock.queue_free()
 	await process_frame
 

@@ -37,8 +37,6 @@ var _y_sort: OptionButton
 var _render_width: SpinBox
 var _render_height: SpinBox
 var _keep_render_ratio: CheckButton
-var _expected_width: SpinBox
-var _expected_height: SpinBox
 var _bounds_enabled: CheckButton
 var _bounds_fields: Array[SpinBox] = []
 var _terrain_options: OptionButton
@@ -78,11 +76,6 @@ func get_validation_text() -> String:
 func set_render_width_for_validation(value: int) -> void:
 	if _render_width != null:
 		_render_width.value = value
-
-
-func set_profile_footprint_width_for_validation(value: int) -> void:
-	if _expected_width != null:
-		_expected_width.value = value
 
 
 func set_prototype_color_for_validation(value: Color) -> void:
@@ -244,14 +237,6 @@ func _build_visual_tab() -> void:
 	_keep_render_ratio.text = "Lock render aspect ratio"
 	_keep_render_ratio.button_pressed = true
 	form.add_child(_keep_render_ratio)
-	var footprint_help := Label.new()
-	footprint_help.text = "Profile footprint must match the Definition tab footprint. It validates profile compatibility."
-	footprint_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	form.add_child(footprint_help)
-	_expected_width = _add_spinbox_row(form, "Profile footprint W", 1, 256)
-	_expected_width.tooltip_text = "Logical grid width this visual profile is valid for; must match the building definition."
-	_expected_height = _add_spinbox_row(form, "Profile footprint H", 1, 256)
-	_expected_height.tooltip_text = "Logical grid height this visual profile is valid for; must match the building definition."
 	_bounds_enabled = CheckButton.new()
 	_bounds_enabled.text = "Use visual bounds"
 	form.add_child(_bounds_enabled)
@@ -277,7 +262,7 @@ func _build_visual_tab() -> void:
 	for spinbox in _source_rect_fields:
 		spinbox.value_changed.connect(func(_value: float) -> void: _visual_controls_changed())
 	_anchor.item_selected.connect(func(_index: int) -> void: _visual_controls_changed())
-	for spinbox in [_offset_x, _offset_y, _expected_width, _expected_height]:
+	for spinbox in [_offset_x, _offset_y]:
 		spinbox.value_changed.connect(func(_value: float) -> void: _visual_controls_changed())
 	_render_width.value_changed.connect(_render_width_changed)
 	_render_height.value_changed.connect(_render_height_changed)
@@ -420,8 +405,6 @@ func _refresh_controls_from_store() -> void:
 	_select_option_by_metadata(_y_sort, String(profile.get("y_sort_origin", "")))
 	_render_width.value = int(profile.get("render_size", {}).get("width", 1))
 	_render_height.value = int(profile.get("render_size", {}).get("height", 1))
-	_expected_width.value = int(profile.get("expected_footprint_cells", {}).get("width", 1))
-	_expected_height.value = int(profile.get("expected_footprint_cells", {}).get("height", 1))
 	_set_optional_rect_controls(_bounds_enabled, _bounds_fields, profile.get("visual_bounds", null))
 	_loading_controls = false
 	_update_preview_and_status()
@@ -465,7 +448,6 @@ func _visual_controls_changed() -> void:
 		"pixel_offset": {"x": int(_offset_x.value), "y": int(_offset_y.value)},
 		"y_sort_origin": _option_metadata(_y_sort, _y_sort.selected),
 		"render_size": {"width": int(_render_width.value), "height": int(_render_height.value)},
-		"expected_footprint_cells": {"width": int(_expected_width.value), "height": int(_expected_height.value)},
 		"visual_bounds": visual_bounds,
 	})
 	_update_optional_rect_enabled_states()

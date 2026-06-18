@@ -188,13 +188,6 @@ func _validate_complete_data(definitions_data: Dictionary, profiles_data: Dictio
 				"Building definition '%s' references unknown visual_profile_id '%s'."
 				% [definition.id, profile_id]
 			)
-		var footprint_result: Dictionary = registry.call(
-			"validate_visual_profile_footprint_match",
-			definition,
-			profiles_by_id[profile_id]
-		)
-		if not footprint_result.ok:
-			return footprint_result
 	return _success()
 
 

@@ -20,10 +20,6 @@
 		"y": 0,
 		"width": 128,
 		"height": 96
-	  },
-	  "expected_footprint_cells": {
-		"width": 4,
-		"height": 3
 	  }
 	},
 	{
@@ -45,10 +41,6 @@
 		"y": 0,
 		"width": 64,
 		"height": 64
-	  },
-	  "expected_footprint_cells": {
-		"width": 2,
-		"height": 2
 	  }
 	},
 	{
@@ -70,10 +62,6 @@
 		"y": 0,
 		"width": 64,
 		"height": 64
-	  },
-	  "expected_footprint_cells": {
-		"width": 2,
-		"height": 2
 	  }
 	}
   ]
