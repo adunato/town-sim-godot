@@ -156,6 +156,12 @@ func _verify_synchronized_tabs() -> void:
 	dock.set_active_tab(1)
 	_expect(dock.get_active_tab_title() == "Visual", "second tab should be Visual")
 	_expect(dock.get_selected_definition_id() == selected_id, "switching tabs should preserve the shared building selection")
+	var footprint: Vector2i = dock.get_definition_footprint_for_validation()
+	var footprint_pixels := footprint * 32
+	dock.align_render_size_to_footprint_for_validation()
+	_expect(dock.get_render_size_for_validation() == footprint_pixels, "render-size action should set sprite size to footprint pixels")
+	dock.align_bounds_size_to_footprint_for_validation()
+	_expect(dock.get_bounds_size_for_validation() == footprint_pixels, "bounds-size action should set visual bounds size to footprint pixels")
 	dock.set_render_width_for_validation(129)
 	_expect(dock.is_save_enabled(), "a valid visual edit should enable Save")
 	_expect(dock.get_validation_text() == "Validation: no errors.", "a valid visual edit should retain a clear validation state")

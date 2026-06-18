@@ -88,6 +88,26 @@ func has_texture_picker() -> bool:
 	return _texture_picker_button != null and _texture_file_dialog != null
 
 
+func align_render_size_to_footprint_for_validation() -> void:
+	_align_render_size_to_footprint()
+
+
+func align_bounds_size_to_footprint_for_validation() -> void:
+	_align_bounds_size_to_footprint()
+
+
+func get_render_size_for_validation() -> Vector2i:
+	return Vector2i(int(_render_width.value), int(_render_height.value))
+
+
+func get_bounds_size_for_validation() -> Vector2i:
+	return Vector2i(int(_bounds_fields[2].value), int(_bounds_fields[3].value))
+
+
+func get_definition_footprint_for_validation() -> Vector2i:
+	return Vector2i(int(_footprint_width.value), int(_footprint_height.value))
+
+
 func set_active_tab(index: int) -> void:
 	if _tabs != null and index >= 0 and index < _tabs.get_tab_count():
 		_tabs.current_tab = index
@@ -191,7 +211,7 @@ func _build_visual_tab() -> void:
 	_profile_id = _add_line_edit_row(form, "Profile ID", true)
 	_texture_path = _add_line_edit_row(form, "Texture path")
 	_texture_picker_button = Button.new()
-	_texture_picker_button.text = "Open…"
+	_texture_picker_button.text = "Open..."
 	_texture_picker_button.tooltip_text = "Choose a project image resource"
 	_add_control_row(form, "Texture file", _texture_picker_button)
 	_source_rect_enabled = CheckButton.new()
@@ -205,17 +225,33 @@ func _build_visual_tab() -> void:
 	_y_sort = _add_options_row(form, "Y-sort origin")
 	_render_width = _add_spinbox_row(form, "Render width", 1, 8192)
 	_render_height = _add_spinbox_row(form, "Render height", 1, 8192)
+	var align_render_button := Button.new()
+	align_render_button.text = "Set render size to footprint"
+	align_render_button.tooltip_text = "Set render width and height to the building footprint in pixels."
+	align_render_button.pressed.connect(_align_render_size_to_footprint)
+	form.add_child(align_render_button)
 	_keep_render_ratio = CheckButton.new()
 	_keep_render_ratio.text = "Lock render aspect ratio"
 	_keep_render_ratio.button_pressed = true
 	form.add_child(_keep_render_ratio)
-	_expected_width = _add_spinbox_row(form, "Expected footprint W", 1, 256)
-	_expected_height = _add_spinbox_row(form, "Expected footprint H", 1, 256)
+	var footprint_help := Label.new()
+	footprint_help.text = "Profile footprint must match the Definition tab footprint. It validates profile compatibility."
+	footprint_help.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	form.add_child(footprint_help)
+	_expected_width = _add_spinbox_row(form, "Profile footprint W", 1, 256)
+	_expected_width.tooltip_text = "Logical grid width this visual profile is valid for; must match the building definition."
+	_expected_height = _add_spinbox_row(form, "Profile footprint H", 1, 256)
+	_expected_height.tooltip_text = "Logical grid height this visual profile is valid for; must match the building definition."
 	_bounds_enabled = CheckButton.new()
 	_bounds_enabled.text = "Use visual bounds"
 	form.add_child(_bounds_enabled)
 	for label_text in ["Bounds X", "Bounds Y", "Bounds width", "Bounds height"]:
 		_bounds_fields.append(_add_spinbox_row(form, label_text, -8192 if label_text.ends_with("X") or label_text.ends_with("Y") else 1, 8192))
+	var align_bounds_button := Button.new()
+	align_bounds_button.text = "Set bounds size to footprint"
+	align_bounds_button.tooltip_text = "Enable visual bounds and set their width and height to the building footprint in pixels."
+	align_bounds_button.pressed.connect(_align_bounds_size_to_footprint)
+	form.add_child(align_bounds_button)
 	_terrain_options = _add_options_row(form, "Preview terrain")
 
 	var preview_panel := PanelContainer.new()
@@ -443,6 +479,28 @@ func _render_height_changed(_value: float) -> void:
 		_syncing_render_size = true
 		_render_width.value = maxf(1.0, round(_render_height.value * _source_aspect_ratio()))
 		_syncing_render_size = false
+	_visual_controls_changed()
+
+
+func _align_render_size_to_footprint() -> void:
+	if _current_definition_id.is_empty():
+		return
+	_syncing_render_size = true
+	_render_width.value = int(_footprint_width.value) * BuildingConfigVisualPreview.DEFAULT_CELL_SIZE
+	_render_height.value = int(_footprint_height.value) * BuildingConfigVisualPreview.DEFAULT_CELL_SIZE
+	_syncing_render_size = false
+	_visual_controls_changed()
+
+
+func _align_bounds_size_to_footprint() -> void:
+	if _current_definition_id.is_empty():
+		return
+	_loading_controls = true
+	_bounds_enabled.button_pressed = true
+	_bounds_fields[2].value = int(_footprint_width.value) * BuildingConfigVisualPreview.DEFAULT_CELL_SIZE
+	_bounds_fields[3].value = int(_footprint_height.value) * BuildingConfigVisualPreview.DEFAULT_CELL_SIZE
+	_loading_controls = false
+	_update_optional_rect_enabled_states()
 	_visual_controls_changed()
 
 
