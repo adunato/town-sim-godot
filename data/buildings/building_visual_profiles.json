@@ -11,6 +11,16 @@
 		"y": 0
 	  },
 	  "y_sort_origin": "footprint_bottom_center",
+	  "render_size": {
+		"width": 128,
+		"height": 96
+	  },
+	  "visual_bounds": {
+		"x": 0,
+		"y": 0,
+		"width": 128,
+		"height": 96
+	  },
 	  "expected_footprint_cells": {
 		"width": 4,
 		"height": 3
@@ -26,6 +36,16 @@
 		"y": 0
 	  },
 	  "y_sort_origin": "footprint_bottom_center",
+	  "render_size": {
+		"width": 64,
+		"height": 64
+	  },
+	  "visual_bounds": {
+		"x": 0,
+		"y": 0,
+		"width": 64,
+		"height": 64
+	  },
 	  "expected_footprint_cells": {
 		"width": 2,
 		"height": 2
@@ -33,7 +53,7 @@
 	},
 	{
 	  "id": "house_sprite",
-	  "texture_path": "res://assets/tiles/play/play_cells_atlas.png",
+	  "texture_path": "res://assets/2D Buildings/medieval_house.png",
 	  "source_rect": null,
 	  "anchor": "footprint_bottom_center",
 	  "pixel_offset": {
@@ -41,6 +61,16 @@
 		"y": 0
 	  },
 	  "y_sort_origin": "footprint_bottom_center",
+	  "render_size": {
+		"width": 64,
+		"height": 64
+	  },
+	  "visual_bounds": {
+		"x": 0,
+		"y": 0,
+		"width": 64,
+		"height": 64
+	  },
 	  "expected_footprint_cells": {
 		"width": 2,
 		"height": 2

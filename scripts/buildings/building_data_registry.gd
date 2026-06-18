@@ -395,7 +395,7 @@ func _validate_definition(definition: Dictionary, source_name: String, index: in
 
 func _validate_visual_profile(profile: Dictionary, source_name: String, index: int) -> Dictionary:
 	var location := "%s profiles[%d]" % [source_name, index]
-	for field in ["id", "texture_path", "anchor", "pixel_offset", "y_sort_origin", "expected_footprint_cells"]:
+	for field in ["id", "texture_path", "anchor", "pixel_offset", "y_sort_origin", "render_size", "expected_footprint_cells"]:
 		if not profile.has(field):
 			return _failure("%s is missing required field '%s'." % [location, field])
 
@@ -421,8 +421,12 @@ func _validate_visual_profile(profile: Dictionary, source_name: String, index: i
 		return _failure("%s field 'pixel_offset' must contain integer x and y fields." % location)
 	if typeof(profile.y_sort_origin) != TYPE_STRING or not SUPPORTED_Y_SORT_ORIGINS.has(String(profile.y_sort_origin)):
 		return _failure("%s field 'y_sort_origin' uses unsupported value '%s'." % [location, profile.get("y_sort_origin", "")])
+	if not _is_size2i_dictionary(profile.render_size):
+		return _failure("%s field 'render_size' must contain positive integer width and height fields." % location)
 	if not _is_footprint_dictionary(profile.expected_footprint_cells):
 		return _failure("%s field 'expected_footprint_cells' must contain positive integer width and height fields." % location)
+	if profile.has("visual_bounds") and profile.visual_bounds != null and not _is_rect2i_dictionary(profile.visual_bounds):
+		return _failure("%s field 'visual_bounds' must be null or contain integer x/y and positive integer width/height fields." % location)
 
 	return _success()
 
@@ -475,6 +479,17 @@ func _is_vector2i_dictionary(value: Variant) -> bool:
 		and _is_integer_number(value.y)
 
 
+func _is_size2i_dictionary(value: Variant) -> bool:
+	if typeof(value) != TYPE_DICTIONARY:
+		return false
+
+	return value.has("width") and value.has("height") \
+		and _is_integer_number(value.width) \
+		and _is_integer_number(value.height) \
+		and int(value.width) > 0 \
+		and int(value.height) > 0
+
+
 func _is_valid_source_rect(value: Variant, texture_width: int, texture_height: int) -> bool:
 	if value == null:
 		return true
@@ -488,6 +503,19 @@ func _is_valid_source_rect(value: Variant, texture_width: int, texture_height: i
 	if rect.position.x < 0 or rect.position.y < 0 or rect.size.x <= 0 or rect.size.y <= 0:
 		return false
 	return rect.position.x + rect.size.x <= texture_width and rect.position.y + rect.size.y <= texture_height
+
+
+func _is_rect2i_dictionary(value: Variant) -> bool:
+	if typeof(value) != TYPE_DICTIONARY:
+		return false
+
+	return value.has("x") and value.has("y") and value.has("width") and value.has("height") \
+		and _is_integer_number(value.x) \
+		and _is_integer_number(value.y) \
+		and _is_integer_number(value.width) \
+		and _is_integer_number(value.height) \
+		and int(value.width) > 0 \
+		and int(value.height) > 0
 
 
 func _footprint_to_vector(value: Dictionary) -> Vector2i:

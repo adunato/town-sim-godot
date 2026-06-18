@@ -97,10 +97,14 @@ func _verify_entity_contract(fixture: Dictionary) -> void:
 			continue
 
 		var definition: Dictionary = definition_result.definition
+		var visual_result: Dictionary = registry.call("resolve_definition_visual_profile", definition)
+		_expect(visual_result.ok, "visual profile lookup should succeed for '%s': %s" % [definition.id, visual_result.get("error", "")])
+		if not visual_result.ok:
+			continue
 		var expected_rect := _expected_world_rect(model, instance, definition)
 		_verify_public_api(entity, instance, definition, expected_rect)
 		_verify_capability_components(entity, instance, definition, expected_rect)
-		_verify_visual(entity, definition, expected_rect)
+		_verify_visual(entity, definition, visual_result.visual_profile, expected_rect)
 		_verify_collision(entity, instance, definition, expected_rect)
 
 
@@ -148,7 +152,7 @@ func _verify_capability_components(entity: Node, instance: Dictionary, definitio
 		_expect(bool(interactable.call("is_interactable")) == bool(definition.interactable), "interactable component flag should match '%s'" % instance.instance_id)
 
 
-func _verify_visual(entity: Node, definition: Dictionary, expected_rect: Rect2) -> void:
+func _verify_visual(entity: Node, definition: Dictionary, visual_profile: Dictionary, expected_rect: Rect2) -> void:
 	var visual: Node = entity.call("get_visual_node")
 	_expect(visual != null, "building entity '%s' should expose a visual node" % entity.call("get_source_instance_id"))
 	if visual == null:
@@ -157,8 +161,20 @@ func _verify_visual(entity: Node, definition: Dictionary, expected_rect: Rect2) 
 	_expect(_rects_equal_approx(visual.call("get_visual_rect"), expected_rect), "visual rect should match world rect for '%s'" % entity.call("get_source_instance_id"))
 	_expect(entity.call("get_visual_profile_id") == String(definition.visual_profile_id), "building entity '%s' should expose the resolved visual profile id" % entity.call("get_source_instance_id"))
 	_expect(visual.call("get_visual_profile_id") == String(definition.visual_profile_id), "visual node should expose visual profile id for '%s'" % entity.call("get_source_instance_id"))
-	_expect(visual.call("get_sprite_node") is Sprite2D, "visual node should create a Sprite2D for '%s'" % entity.call("get_source_instance_id"))
+	var sprite: Sprite2D = visual.call("get_sprite_node")
+	_expect(sprite is Sprite2D, "visual node should create a Sprite2D for '%s'" % entity.call("get_source_instance_id"))
+	if sprite is Sprite2D:
+		var expected_scale := _expected_sprite_scale(sprite, visual_profile)
+		_expect(sprite.scale.is_equal_approx(expected_scale), "visual sprite scale should match render_size for '%s'" % entity.call("get_source_instance_id"))
 	_expect(String(visual.call("get_texture_path")).begins_with("res://"), "visual node should retain texture path for '%s'" % entity.call("get_source_instance_id"))
+
+
+func _expected_sprite_scale(sprite: Sprite2D, visual_profile: Dictionary) -> Vector2:
+	var texture_size := sprite.texture.get_size()
+	return Vector2(
+		float(visual_profile.render_size.width) / maxf(texture_size.x, 1.0),
+		float(visual_profile.render_size.height) / maxf(texture_size.y, 1.0)
+	)
 
 
 func _verify_collision(entity: Node, instance: Dictionary, definition: Dictionary, expected_rect: Rect2) -> void:
