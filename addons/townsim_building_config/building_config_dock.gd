@@ -26,6 +26,8 @@ var _interactable: CheckButton
 
 var _profile_id: LineEdit
 var _texture_path: LineEdit
+var _texture_picker_button: Button
+var _texture_file_dialog: FileDialog
 var _source_rect_enabled: CheckButton
 var _source_rect_fields: Array[SpinBox] = []
 var _anchor: OptionButton
@@ -34,6 +36,7 @@ var _offset_y: SpinBox
 var _y_sort: OptionButton
 var _render_width: SpinBox
 var _render_height: SpinBox
+var _keep_render_ratio: CheckButton
 var _expected_width: SpinBox
 var _expected_height: SpinBox
 var _bounds_enabled: CheckButton
@@ -43,6 +46,7 @@ var _terrain_options: OptionButton
 var _current_definition_id := ""
 var _current_profile_id := ""
 var _loading_controls := false
+var _syncing_render_size := false
 
 
 func _ready() -> void:
@@ -61,6 +65,27 @@ func get_active_tab_title() -> String:
 
 func get_tab_count() -> int:
 	return _tabs.get_tab_count() if _tabs != null else 0
+
+
+func is_save_enabled() -> bool:
+	return _save_button != null and not _save_button.disabled
+
+
+func get_validation_text() -> String:
+	return _validation_label.text if _validation_label != null else ""
+
+
+func set_render_width_for_validation(value: int) -> void:
+	if _render_width != null:
+		_render_width.value = value
+
+
+func is_render_ratio_locked() -> bool:
+	return _keep_render_ratio != null and _keep_render_ratio.button_pressed
+
+
+func has_texture_picker() -> bool:
+	return _texture_picker_button != null and _texture_file_dialog != null
 
 
 func set_active_tab(index: int) -> void:
@@ -165,6 +190,10 @@ func _build_visual_tab() -> void:
 
 	_profile_id = _add_line_edit_row(form, "Profile ID", true)
 	_texture_path = _add_line_edit_row(form, "Texture path")
+	_texture_picker_button = Button.new()
+	_texture_picker_button.text = "Open…"
+	_texture_picker_button.tooltip_text = "Choose a project image resource"
+	_add_control_row(form, "Texture file", _texture_picker_button)
 	_source_rect_enabled = CheckButton.new()
 	_source_rect_enabled.text = "Use source rectangle"
 	form.add_child(_source_rect_enabled)
@@ -176,6 +205,10 @@ func _build_visual_tab() -> void:
 	_y_sort = _add_options_row(form, "Y-sort origin")
 	_render_width = _add_spinbox_row(form, "Render width", 1, 8192)
 	_render_height = _add_spinbox_row(form, "Render height", 1, 8192)
+	_keep_render_ratio = CheckButton.new()
+	_keep_render_ratio.text = "Lock render aspect ratio"
+	_keep_render_ratio.button_pressed = true
+	form.add_child(_keep_render_ratio)
 	_expected_width = _add_spinbox_row(form, "Expected footprint W", 1, 256)
 	_expected_height = _add_spinbox_row(form, "Expected footprint H", 1, 256)
 	_bounds_enabled = CheckButton.new()
@@ -193,17 +226,33 @@ func _build_visual_tab() -> void:
 	preview_panel.add_child(_preview)
 
 	_texture_path.text_changed.connect(func(_value: String) -> void: _visual_controls_changed())
+	_texture_picker_button.pressed.connect(_open_texture_picker)
 	_source_rect_enabled.toggled.connect(func(_value: bool) -> void: _visual_controls_changed())
 	for spinbox in _source_rect_fields:
 		spinbox.value_changed.connect(func(_value: float) -> void: _visual_controls_changed())
 	_anchor.item_selected.connect(func(_index: int) -> void: _visual_controls_changed())
-	for spinbox in [_offset_x, _offset_y, _render_width, _render_height, _expected_width, _expected_height]:
+	for spinbox in [_offset_x, _offset_y, _expected_width, _expected_height]:
 		spinbox.value_changed.connect(func(_value: float) -> void: _visual_controls_changed())
+	_render_width.value_changed.connect(_render_width_changed)
+	_render_height.value_changed.connect(_render_height_changed)
 	_y_sort.item_selected.connect(func(_index: int) -> void: _visual_controls_changed())
 	_bounds_enabled.toggled.connect(func(_value: bool) -> void: _visual_controls_changed())
 	for spinbox in _bounds_fields:
 		spinbox.value_changed.connect(func(_value: float) -> void: _visual_controls_changed())
 	_terrain_options.item_selected.connect(func(_index: int) -> void: _update_preview_and_status())
+
+	_texture_file_dialog = FileDialog.new()
+	_texture_file_dialog.title = "Select building texture"
+	_texture_file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	_texture_file_dialog.access = FileDialog.ACCESS_RESOURCES
+	_texture_file_dialog.filters = PackedStringArray([
+		"*.png ; PNG images",
+		"*.jpg,*.jpeg ; JPEG images",
+		"*.webp ; WebP images",
+		"*.svg ; SVG images",
+	])
+	_texture_file_dialog.file_selected.connect(_texture_file_selected)
+	add_child(_texture_file_dialog)
 
 
 func _add_control_row(parent: Control, label_text: String, control: Control) -> void:
@@ -377,6 +426,48 @@ func _visual_controls_changed() -> void:
 	_update_preview_and_status()
 
 
+func _render_width_changed(_value: float) -> void:
+	if _loading_controls or _syncing_render_size:
+		return
+	if _keep_render_ratio.button_pressed:
+		_syncing_render_size = true
+		_render_height.value = maxf(1.0, round(_render_width.value / _source_aspect_ratio()))
+		_syncing_render_size = false
+	_visual_controls_changed()
+
+
+func _render_height_changed(_value: float) -> void:
+	if _loading_controls or _syncing_render_size:
+		return
+	if _keep_render_ratio.button_pressed:
+		_syncing_render_size = true
+		_render_width.value = maxf(1.0, round(_render_height.value * _source_aspect_ratio()))
+		_syncing_render_size = false
+	_visual_controls_changed()
+
+
+func _source_aspect_ratio() -> float:
+	if _source_rect_enabled.button_pressed:
+		return maxf(_source_rect_fields[2].value, 1.0) / maxf(_source_rect_fields[3].value, 1.0)
+	var path := _texture_path.text
+	if path.is_empty() or not ResourceLoader.exists(path, "Texture2D"):
+		return maxf(_render_width.value, 1.0) / maxf(_render_height.value, 1.0)
+	var texture := ResourceLoader.load(path, "Texture2D") as Texture2D
+	if texture == null:
+		return maxf(_render_width.value, 1.0) / maxf(_render_height.value, 1.0)
+	return maxf(float(texture.get_width()), 1.0) / maxf(float(texture.get_height()), 1.0)
+
+
+func _open_texture_picker() -> void:
+	_texture_file_dialog.current_path = _texture_path.text
+	_texture_file_dialog.popup_centered_ratio(0.72)
+
+
+func _texture_file_selected(path: String) -> void:
+	_texture_path.text = path
+	_visual_controls_changed()
+
+
 func _save_pressed() -> void:
 	var result := _store.save()
 	if not result.ok:
@@ -400,7 +491,15 @@ func _update_preview_and_status() -> void:
 		_preview.set_preview_data(definition, profile, terrain)
 	var messages := _store.get_validation_messages()
 	_validation_label.text = "Validation: no errors." if messages.is_empty() else "Validation:\n- " + "\n- ".join(messages)
-	_save_button.disabled = not messages.is_empty() or _current_definition_id.is_empty()
+	var has_selection := not _current_definition_id.is_empty()
+	var is_dirty := _store.is_dirty()
+	_save_button.disabled = not has_selection or not is_dirty or not messages.is_empty()
+	if not messages.is_empty():
+		_save_button.tooltip_text = "Save blocked until validation errors are fixed."
+	elif not is_dirty:
+		_save_button.tooltip_text = "No unsaved building changes."
+	else:
+		_save_button.tooltip_text = "Save building definition and visual profile changes."
 	_dirty_label.text = "Unsaved" if _store.is_dirty() else "Saved"
 
 

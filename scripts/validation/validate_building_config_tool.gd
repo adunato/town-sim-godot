@@ -149,10 +149,16 @@ func _verify_synchronized_tabs() -> void:
 	await process_frame
 	_expect(dock.get_tab_count() == 2, "building configuration dock should expose Definition and Visual tabs")
 	_expect(dock.get_active_tab_title() == "Definition", "Definition should be the first tab")
+	_expect(dock.is_render_ratio_locked(), "Visual tab should restore the render aspect-ratio lock")
+	_expect(dock.has_texture_picker(), "Visual tab should provide a texture file picker")
+	_expect(not dock.is_save_enabled(), "Save should be disabled when there are no unsaved changes")
 	var selected_id := dock.get_selected_definition_id()
 	dock.set_active_tab(1)
 	_expect(dock.get_active_tab_title() == "Visual", "second tab should be Visual")
 	_expect(dock.get_selected_definition_id() == selected_id, "switching tabs should preserve the shared building selection")
+	dock.set_render_width_for_validation(129)
+	_expect(dock.is_save_enabled(), "a valid visual edit should enable Save")
+	_expect(dock.get_validation_text() == "Validation: no errors.", "a valid visual edit should retain a clear validation state")
 	dock.queue_free()
 	await process_frame
 
