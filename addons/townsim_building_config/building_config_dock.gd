@@ -85,6 +85,11 @@ func set_profile_footprint_width_for_validation(value: int) -> void:
 		_expected_width.value = value
 
 
+func set_prototype_color_for_validation(value: Color) -> void:
+	if _prototype_color != null:
+		_prototype_color.color = value
+
+
 func is_render_ratio_locked() -> bool:
 	return _keep_render_ratio != null and _keep_render_ratio.button_pressed
 
@@ -428,7 +433,7 @@ func _definition_controls_changed() -> void:
 	_store.update_definition_fields(_current_definition_id, {
 		"display_name": _display_name.text,
 		"footprint_cells": {"width": int(_footprint_width.value), "height": int(_footprint_height.value)},
-		"prototype_color": _prototype_color.color.to_html(false),
+		"prototype_color": "#" + _prototype_color.color.to_html(false),
 		"selectable": _selectable.button_pressed,
 		"interactable": _interactable.button_pressed,
 	})
