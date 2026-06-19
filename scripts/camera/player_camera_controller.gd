@@ -7,6 +7,9 @@ const UNSUPPORTED_MODE_ERROR := "PlayerCameraController only supports centered_p
 
 @export var active_mode: StringName = MODE_CENTERED_PLAYER
 @export var initial_zoom: Vector2 = Vector2.ONE
+@export var zoom_step := 0.4
+@export var minimum_zoom := 1.0
+@export var maximum_zoom := 6.4
 
 var _map_model: RefCounted
 var _map_world_rect: Rect2 = Rect2()
@@ -18,6 +21,15 @@ func _ready() -> void:
 		get_viewport().size_changed.connect(_on_viewport_size_changed)
 
 
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("zoom_in"):
+		apply_zoom_step(1)
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("zoom_out"):
+		apply_zoom_step(-1)
+		get_viewport().set_input_as_handled()
+
+
 func configure_for_map(map_model: RefCounted) -> Dictionary:
 	if active_mode != MODE_CENTERED_PLAYER:
 		return _failure("%s Got '%s'." % [UNSUPPORTED_MODE_ERROR, active_mode])
@@ -25,8 +37,10 @@ func configure_for_map(map_model: RefCounted) -> Dictionary:
 		return _failure(NO_MAP_MODEL_ERROR)
 	if not _map_model_has_required_contract(map_model):
 		return _failure("Map model is missing grid dimensions, cell size, or origin.")
-	if initial_zoom.x <= 0.0 or initial_zoom.y <= 0.0:
-		return _failure("initial_zoom must be positive on both axes.")
+
+	var zoom_config_result := _validate_zoom_configuration()
+	if not zoom_config_result.ok:
+		return zoom_config_result
 
 	_map_model = map_model
 	_configured = true
@@ -59,6 +73,15 @@ func get_camera_limits_rect() -> Rect2:
 
 func get_active_mode() -> StringName:
 	return active_mode
+
+
+func apply_zoom_step(direction: int) -> void:
+	if direction == 0:
+		return
+
+	var signed_step := zoom_step if direction > 0 else -zoom_step
+	var next_zoom := clampf(zoom.x + signed_step, minimum_zoom, maximum_zoom)
+	zoom = Vector2(next_zoom, next_zoom)
 
 
 func get_limited_camera_center_for_world_position(world_position: Vector2) -> Vector2:
@@ -95,6 +118,23 @@ func _map_model_has_required_contract(map_model: RefCounted) -> bool:
 		and typeof(map_model.get("grid_width")) == TYPE_INT \
 		and typeof(map_model.get("grid_height")) == TYPE_INT \
 		and typeof(map_model.get("cell_size")) == TYPE_INT
+
+
+func _validate_zoom_configuration() -> Dictionary:
+	if zoom_step <= 0.0:
+		return _failure("zoom_step must be positive.")
+	if minimum_zoom <= 0.0:
+		return _failure("minimum_zoom must be positive.")
+	if maximum_zoom <= 0.0:
+		return _failure("maximum_zoom must be positive.")
+	if minimum_zoom > maximum_zoom:
+		return _failure("minimum_zoom must not be greater than maximum_zoom.")
+	if not is_equal_approx(initial_zoom.x, initial_zoom.y):
+		return _failure("initial_zoom must be uniform on both axes.")
+	if initial_zoom.x < minimum_zoom or initial_zoom.x > maximum_zoom:
+		return _failure("initial_zoom must be between minimum_zoom and maximum_zoom.")
+
+	return _success()
 
 
 func _on_viewport_size_changed() -> void:
