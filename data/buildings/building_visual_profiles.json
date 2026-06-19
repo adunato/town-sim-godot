@@ -1,68 +1,68 @@
 {
-  "schema_version": 1,
-  "profiles": [
-	{
-	  "id": "town_hall_sprite",
-	  "texture_path": "res://assets/tiles/play/play_cells_atlas.png",
-	  "source_rect": null,
-	  "anchor": "footprint_bottom_center",
-	  "pixel_offset": {
-		"x": 0,
-		"y": 0
-	  },
-	  "y_sort_origin": "footprint_bottom_center",
-	  "render_size": {
-		"width": 128,
-		"height": 96
-	  },
-	  "visual_bounds": {
-		"x": 0,
-		"y": 0,
-		"width": 128,
-		"height": 96
-	  }
-	},
-	{
-	  "id": "bakery_sprite",
-	  "texture_path": "res://assets/tiles/play/play_cells_atlas.png",
-	  "source_rect": null,
-	  "anchor": "footprint_bottom_center",
-	  "pixel_offset": {
-		"x": 0,
-		"y": 0
-	  },
-	  "y_sort_origin": "footprint_bottom_center",
-	  "render_size": {
-		"width": 64,
-		"height": 64
-	  },
-	  "visual_bounds": {
-		"x": 0,
-		"y": 0,
-		"width": 64,
-		"height": 64
-	  }
-	},
-	{
-	  "id": "house_sprite",
-	  "texture_path": "res://assets/2D Buildings/medieval_house.png",
-	  "source_rect": null,
-	  "anchor": "footprint_bottom_center",
-	  "pixel_offset": {
-		"x": 0,
-		"y": 0
-	  },
-	  "y_sort_origin": "footprint_bottom_center",
-	  "render_size": {
-		"width": 64,
-		"height": 64
-	  },
-	  "visual_bounds": {
-		"x": 0,
-		"y": 0,
-		"width": 64,
-		"height": 64
-	  }
-	}
-  ]
+	"profiles": [
+		{
+			"anchor": "footprint_bottom_center",
+			"id": "town_hall_sprite",
+			"pixel_offset": {
+				"x": 0.0,
+				"y": 0.0
+			},
+			"render_size": {
+				"height": 96.0,
+				"width": 128.0
+			},
+			"source_rect": null,
+			"texture_path": "res://assets/tiles/play/play_cells_atlas.png",
+			"visual_bounds": {
+				"height": 96.0,
+				"width": 128.0,
+				"x": 0.0,
+				"y": 0.0
+			},
+			"y_sort_origin": "footprint_bottom_center"
+		},
+		{
+			"anchor": "footprint_bottom_center",
+			"id": "bakery_sprite",
+			"pixel_offset": {
+				"x": 0.0,
+				"y": 0.0
+			},
+			"render_size": {
+				"height": 64.0,
+				"width": 64.0
+			},
+			"source_rect": null,
+			"texture_path": "res://assets/tiles/play/play_cells_atlas.png",
+			"visual_bounds": {
+				"height": 64.0,
+				"width": 64.0,
+				"x": 0.0,
+				"y": 0.0
+			},
+			"y_sort_origin": "footprint_bottom_center"
+		},
+		{
+			"anchor": "footprint_bottom_center",
+			"id": "house_sprite",
+			"pixel_offset": {
+				"x": 0,
+				"y": 0
+			},
+			"render_size": {
+				"height": 256,
+				"width": 256
+			},
+			"source_rect": null,
+			"texture_path": "res://assets/2D Buildings/medieval_house2.png",
+			"visual_bounds": {
+				"height": 256,
+				"width": 256,
+				"x": 0,
+				"y": 0
+			},
+			"y_sort_origin": "footprint_bottom_center"
+		}
+	],
+	"schema_version": 1.0
 }

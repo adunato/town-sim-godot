@@ -19,14 +19,14 @@ config/icon="res://icon.svg"
 
 _mcp_game_helper="*res://addons/godot_ai/runtime/game_helper.gd"
 
-[editor_plugins]
-
-enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg", "res://addons/townsim_sprite_preview/plugin.cfg", "res://addons/townsim_building_config/plugin.cfg")
-
 [display]
 
 window/size/viewport_width=2560
 window/size/viewport_height=1440
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg", "res://addons/townsim_sprite_preview/plugin.cfg", "res://addons/townsim_building_config/plugin.cfg")
 
 [input]
 

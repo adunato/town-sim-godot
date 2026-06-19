@@ -1,41 +1,41 @@
 {
-  "schema_version": 1,
-  "definitions": [
-	{
-	  "id": "town_hall",
-	  "display_name": "Town Hall",
-	  "footprint_cells": {
-		"width": 4,
-		"height": 3
-	  },
-	  "visual_profile_id": "town_hall_sprite",
-	  "prototype_color": "#8F6A3D",
-	  "selectable": true,
-	  "interactable": true
-	},
-	{
-	  "id": "bakery",
-	  "display_name": "Bakery",
-	  "footprint_cells": {
-		"width": 2,
-		"height": 2
-	  },
-	  "visual_profile_id": "bakery_sprite",
-	  "prototype_color": "#D28A5E",
-	  "selectable": true,
-	  "interactable": true
-	},
-	{
-	  "id": "house",
-	  "display_name": "House",
-	  "footprint_cells": {
-		"width": 2,
-		"height": 2
-	  },
-	  "visual_profile_id": "house_sprite",
-	  "prototype_color": "#6FA8DC",
-	  "selectable": true,
-	  "interactable": false
-	}
-  ]
+	"definitions": [
+		{
+			"display_name": "Town Hall",
+			"footprint_cells": {
+				"height": 3.0,
+				"width": 4.0
+			},
+			"id": "town_hall",
+			"interactable": true,
+			"prototype_color": "#8F6A3D",
+			"selectable": true,
+			"visual_profile_id": "town_hall_sprite"
+		},
+		{
+			"display_name": "Bakery",
+			"footprint_cells": {
+				"height": 2.0,
+				"width": 2.0
+			},
+			"id": "bakery",
+			"interactable": true,
+			"prototype_color": "#D28A5E",
+			"selectable": true,
+			"visual_profile_id": "bakery_sprite"
+		},
+		{
+			"display_name": "House",
+			"footprint_cells": {
+				"height": 8,
+				"width": 8
+			},
+			"id": "house",
+			"interactable": false,
+			"prototype_color": "#6fa8dc",
+			"selectable": true,
+			"visual_profile_id": "house_sprite"
+		}
+	],
+	"schema_version": 1.0
 }
