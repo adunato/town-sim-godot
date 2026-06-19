@@ -15,6 +15,7 @@ var _visual_profile: Dictionary = {}
 var _sprite: Sprite2D
 var _texture_path := ""
 var _y_sort_origin_local_y := 0
+var _highlight_active := false
 
 
 func configure(rect_size: Vector2, fill_color: Color, visual_profile: Dictionary = {}) -> Dictionary:
@@ -28,6 +29,7 @@ func configure(rect_size: Vector2, fill_color: Color, visual_profile: Dictionary
 	_visual_profile = visual_profile.duplicate(true)
 	_texture_path = ""
 	_y_sort_origin_local_y = int(round(rect_size.y))
+	_highlight_active = false
 	_clear_sprite()
 
 	if not visual_profile.is_empty():
@@ -63,6 +65,7 @@ func set_highlight_color(fill_color: Color, outline_color: Color, outline_width:
 	_fill_color = fill_color
 	_outline_color = outline_color
 	_outline_width = outline_width
+	_highlight_active = true
 	if _sprite != null:
 		_sprite.modulate = fill_color
 	queue_redraw()
@@ -72,6 +75,7 @@ func reset_highlight() -> void:
 	_fill_color = _default_fill_color
 	_outline_color = _default_outline_color
 	_outline_width = _default_outline_width
+	_highlight_active = false
 	if _sprite != null:
 		_sprite.modulate = Color.WHITE
 	queue_redraw()
@@ -187,7 +191,12 @@ func _draw() -> void:
 
 	if _sprite == null:
 		draw_rect(_rect, _fill_color, true)
-	draw_rect(_rect, _outline_color, false, _outline_width)
+	if _sprite == null or _highlight_active:
+		draw_rect(_rect, _outline_color, false, _outline_width)
+
+
+func is_highlight_outline_visible() -> bool:
+	return _sprite == null or _highlight_active
 
 
 func _is_integer_number(value: Variant) -> bool:

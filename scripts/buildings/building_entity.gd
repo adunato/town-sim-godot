@@ -207,7 +207,7 @@ func _validate_inputs(map_model: RefCounted, instance: Dictionary, definition: D
 	for field in ["id", "display_name", "footprint_cells", "visual_profile_id", "prototype_color", "selectable", "interactable"]:
 		if not definition.has(field):
 			return _failure("BuildingEntity source definition is missing required field '%s'." % field)
-	for field in ["id", "texture_path", "anchor", "pixel_offset", "y_sort_origin", "expected_footprint_cells"]:
+	for field in ["id", "texture_path", "anchor", "pixel_offset", "y_sort_origin"]:
 		if not visual_profile.has(field):
 			return _failure("BuildingEntity source visual profile is missing required field '%s'." % field)
 	if String(instance.definition_id) != String(definition.id):
@@ -218,10 +218,6 @@ func _validate_inputs(map_model: RefCounted, instance: Dictionary, definition: D
 		return _failure("BuildingEntity instance '%s' origin_cell must contain integer x and y fields." % instance.instance_id)
 	if not _is_footprint_dictionary(definition.footprint_cells):
 		return _failure("BuildingEntity definition '%s' footprint_cells must contain positive integer width and height fields." % definition.id)
-	if not _is_footprint_dictionary(visual_profile.expected_footprint_cells):
-		return _failure("BuildingEntity visual profile '%s' expected_footprint_cells must contain positive integer width and height fields." % visual_profile.id)
-	if Vector2i(int(definition.footprint_cells.width), int(definition.footprint_cells.height)) != Vector2i(int(visual_profile.expected_footprint_cells.width), int(visual_profile.expected_footprint_cells.height)):
-		return _failure("BuildingEntity definition '%s' footprint must match visual profile '%s' expected footprint." % [definition.id, visual_profile.id])
 	return _success()
 
 

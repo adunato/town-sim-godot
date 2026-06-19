@@ -174,10 +174,6 @@ func resolve_definition_visual_profile(definition: Dictionary) -> Dictionary:
 	if not profile_result.ok:
 		return _failure("Building definition '%s' references unknown visual_profile_id '%s'." % [definition.id, profile_id])
 
-	var footprint_result := validate_visual_profile_footprint_match(definition, profile_result.visual_profile)
-	if not footprint_result.ok:
-		return footprint_result
-
 	return _success({
 		"definition": definition.duplicate(true),
 		"visual_profile": profile_result.visual_profile,
@@ -348,20 +344,7 @@ func validate_visual_profile_references(source_name: String = "<loaded definitio
 		var profile_id := String(definition.visual_profile_id)
 		if not has_visual_profile(profile_id):
 			return _failure("%s definition id '%s' references unknown visual_profile_id '%s'." % [source_name, definition_id, profile_id])
-		var footprint_result := validate_visual_profile_footprint_match(definition, _visual_profiles_by_id[profile_id])
-		if not footprint_result.ok:
-			return footprint_result
 
-	return _success()
-
-
-func validate_visual_profile_footprint_match(definition: Dictionary, profile: Dictionary) -> Dictionary:
-	if not definition.has("footprint_cells") or not profile.has("expected_footprint_cells"):
-		return _failure("Cannot compare building footprint to visual profile footprint because required fields are missing.")
-	var definition_footprint := _footprint_to_vector(definition.footprint_cells)
-	var expected_footprint := _footprint_to_vector(profile.expected_footprint_cells)
-	if definition_footprint != expected_footprint:
-		return _failure("Building definition '%s' footprint %s does not match visual profile '%s' expected footprint %s." % [definition.get("id", "<unknown>"), definition_footprint, profile.get("id", "<unknown>"), expected_footprint])
 	return _success()
 
 
@@ -395,7 +378,7 @@ func _validate_definition(definition: Dictionary, source_name: String, index: in
 
 func _validate_visual_profile(profile: Dictionary, source_name: String, index: int) -> Dictionary:
 	var location := "%s profiles[%d]" % [source_name, index]
-	for field in ["id", "texture_path", "anchor", "pixel_offset", "y_sort_origin", "render_size", "expected_footprint_cells"]:
+	for field in ["id", "texture_path", "anchor", "pixel_offset", "y_sort_origin", "render_size"]:
 		if not profile.has(field):
 			return _failure("%s is missing required field '%s'." % [location, field])
 
@@ -423,8 +406,6 @@ func _validate_visual_profile(profile: Dictionary, source_name: String, index: i
 		return _failure("%s field 'y_sort_origin' uses unsupported value '%s'." % [location, profile.get("y_sort_origin", "")])
 	if not _is_size2i_dictionary(profile.render_size):
 		return _failure("%s field 'render_size' must contain positive integer width and height fields." % location)
-	if not _is_footprint_dictionary(profile.expected_footprint_cells):
-		return _failure("%s field 'expected_footprint_cells' must contain positive integer width and height fields." % location)
 	if profile.has("visual_bounds") and profile.visual_bounds != null and not _is_rect2i_dictionary(profile.visual_bounds):
 		return _failure("%s field 'visual_bounds' must be null or contain integer x/y and positive integer width/height fields." % location)
 
@@ -516,10 +497,6 @@ func _is_rect2i_dictionary(value: Variant) -> bool:
 		and _is_integer_number(value.height) \
 		and int(value.width) > 0 \
 		and int(value.height) > 0
-
-
-func _footprint_to_vector(value: Dictionary) -> Vector2i:
-	return Vector2i(int(value.width), int(value.height))
 
 
 func _is_integer_number(value: Variant) -> bool:
