@@ -32,6 +32,9 @@ func _run_checks() -> void:
 
 	_verify_scene_contract(scene)
 	_verify_camera_contract(scene, model)
+	_verify_zoom_input_actions()
+	_verify_zoom_steps_and_limits(scene)
+	_verify_invalid_zoom_configuration(scene, model)
 	_verify_map_size_supports_camera_panning(scene, model)
 	await _verify_center_edge_and_corner_visibility(scene, model)
 	_verify_screen_space_ui(scene)
@@ -64,6 +67,74 @@ func _verify_camera_contract(scene: Node, model: RefCounted) -> void:
 
 	var limits_rect: Rect2 = camera.call("get_camera_limits_rect")
 	_expect(limits_rect == expected_rect, "PlayerCamera limits expected %s, got %s" % [expected_rect, limits_rect])
+
+
+func _verify_zoom_input_actions() -> void:
+	_expect(InputMap.has_action("zoom_in"), "project should define zoom_in input action")
+	_expect(InputMap.has_action("zoom_out"), "project should define zoom_out input action")
+	_expect(_action_has_mouse_button("zoom_in", MOUSE_BUTTON_WHEEL_UP), "zoom_in should bind mouse-wheel up")
+	_expect(_action_has_mouse_button("zoom_out", MOUSE_BUTTON_WHEEL_DOWN), "zoom_out should bind mouse-wheel down")
+
+
+func _verify_zoom_steps_and_limits(scene: Node) -> void:
+	var camera := scene.get_node("World/Player/PlayerCamera")
+	var original_zoom: Vector2 = camera.zoom
+	var original_step: float = camera.zoom_step
+	var original_minimum: float = camera.minimum_zoom
+	var original_maximum: float = camera.maximum_zoom
+
+	camera.zoom_step = 0.25
+	camera.minimum_zoom = 2.0
+	camera.maximum_zoom = 4.0
+	camera.zoom = Vector2(3.0, 3.0)
+
+	camera.call("apply_zoom_step", 1)
+	_expect(camera.zoom == Vector2(3.25, 3.25), "zoom_in should increase both axes by exactly zoom_step")
+	camera.call("apply_zoom_step", -1)
+	_expect(camera.zoom == Vector2(3.0, 3.0), "zoom_out should decrease both axes by exactly zoom_step")
+
+	camera.zoom = Vector2(3.9, 3.9)
+	camera.call("apply_zoom_step", 1)
+	_expect(camera.zoom == Vector2(4.0, 4.0), "zoom_in should clamp uniformly at maximum_zoom")
+	camera.zoom = Vector2(2.1, 2.1)
+	camera.call("apply_zoom_step", -1)
+	_expect(camera.zoom == Vector2(2.0, 2.0), "zoom_out should clamp uniformly at minimum_zoom")
+
+	camera.zoom_step = original_step
+	camera.minimum_zoom = original_minimum
+	camera.maximum_zoom = original_maximum
+	camera.zoom = original_zoom
+
+
+func _verify_invalid_zoom_configuration(scene: Node, model: RefCounted) -> void:
+	var camera := scene.get_node("World/Player/PlayerCamera")
+	var original_zoom: Vector2 = camera.initial_zoom
+	var original_step: float = camera.zoom_step
+	var original_minimum: float = camera.minimum_zoom
+	var original_maximum: float = camera.maximum_zoom
+
+	camera.zoom_step = 0.0
+	var result: Dictionary = camera.call("configure_for_map", model)
+	_expect(not result.ok and String(result.error).contains("zoom_step"), "zero zoom_step should return a concrete configuration error")
+
+	camera.zoom_step = original_step
+	camera.minimum_zoom = 4.0
+	camera.maximum_zoom = 2.0
+	result = camera.call("configure_for_map", model)
+	_expect(not result.ok and String(result.error).contains("minimum_zoom"), "minimum_zoom above maximum_zoom should return a concrete configuration error")
+
+	camera.minimum_zoom = original_minimum
+	camera.maximum_zoom = original_maximum
+	camera.initial_zoom = Vector2(original_minimum - 0.1, original_minimum - 0.1)
+	result = camera.call("configure_for_map", model)
+	_expect(not result.ok and String(result.error).contains("initial_zoom"), "initial_zoom outside limits should return a concrete configuration error")
+
+	camera.initial_zoom = original_zoom
+	camera.zoom_step = original_step
+	camera.minimum_zoom = original_minimum
+	camera.maximum_zoom = original_maximum
+	result = camera.call("configure_for_map", model)
+	_expect(result.ok, "camera should reconfigure after restoring valid zoom settings")
 
 
 func _verify_map_size_supports_camera_panning(scene: Node, model: RefCounted) -> void:
@@ -126,6 +197,14 @@ func _camera_contract_excludes_padded_player(camera: Object) -> bool:
 			return false
 
 	return true
+
+
+func _action_has_mouse_button(action: StringName, button_index: MouseButton) -> bool:
+	for event in InputMap.action_get_events(action):
+		if event is InputEventMouseButton and event.button_index == button_index:
+			return true
+
+	return false
 
 
 func _world_position_is_visible_after_limit(camera: Node, world_position: Vector2, visible_size: Vector2) -> bool:
